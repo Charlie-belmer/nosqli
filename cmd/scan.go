@@ -21,6 +21,8 @@ import (
     "net/http"
     "io/ioutil"
     "github.com/spf13/cobra"
+    "net/url"
+    "log"
 )
 
 // scanCmd represents the scan command
@@ -43,9 +45,14 @@ func init() {
 }
 
 func baseline() {
+    u, err := url.Parse(target)
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Pringln(type u)
     resp, err := http.Get(target)
     if err != nil {
-        fmt.Println(err)
+        log.Fatal(err)
         return
     }
 
@@ -61,6 +68,12 @@ func baseline() {
     fmt.Println(string(body))
 }
 
+//func subQueryString(u *URL, param string, sub string) {
+//    q := u.Query()
+    //https://golang.org/pkg/net/url/#URL.Query
+    //TODO: check that param exists, else return error
+    //return updated URL with param replaced with sub.
+//}
 /* Tests:
  - Check for error text in the response. Sample: 
  Fatal error: Uncaught MongoDB\Driver\Exception\CommandException: unknown operator: $ in /var/www/html/user_lookup.php:37 Stack trace: #0 /var/www/html/user_lookup.php(37): MongoDB\Driver\Manager->executeQuery('sans.users', Object(MongoDB\Driver\Query)) #1 {main} thrown in /var/www/html/user_lookup.php on line 37
@@ -75,3 +88,7 @@ On line: 48
 when passing in a single or double quote as an argument. http://localhost:8080/guess_the_key.php?guess=%27%22%7B%7D#
 
 In this one, it's direct JS injection, not really mongo injection per se.
+
+
+Useful test list: https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/NoSQL%20Injection
+*/
