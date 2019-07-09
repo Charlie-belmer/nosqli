@@ -45,11 +45,6 @@ func init() {
 }
 
 func baseline() {
-    u, err := url.Parse(target)
-    if err != nil {
-        log.Fatal(err)
-    }
-    fmt.Pringln(type u)
     resp, err := http.Get(target)
     if err != nil {
         log.Fatal(err)
@@ -68,12 +63,18 @@ func baseline() {
     fmt.Println(string(body))
 }
 
-//func subQueryString(u *URL, param string, sub string) {
-//    q := u.Query()
+
+
+func subQueryString(url string, param string, sub string) {
+    u, err := url.Parse(target)
+    if err != nil {
+        log.Fatal(err)
+    }
+    q := u.Query()
     //https://golang.org/pkg/net/url/#URL.Query
     //TODO: check that param exists, else return error
     //return updated URL with param replaced with sub.
-//}
+}
 /* Tests:
  - Check for error text in the response. Sample: 
  Fatal error: Uncaught MongoDB\Driver\Exception\CommandException: unknown operator: $ in /var/www/html/user_lookup.php:37 Stack trace: #0 /var/www/html/user_lookup.php(37): MongoDB\Driver\Manager->executeQuery('sans.users', Object(MongoDB\Driver\Query)) #1 {main} thrown in /var/www/html/user_lookup.php on line 37
