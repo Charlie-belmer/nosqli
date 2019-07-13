@@ -21,8 +21,10 @@ import (
     "net/http"
     "io/ioutil"
     "github.com/spf13/cobra"
-    "net/url"
+ //   "net/url"
     "log"
+//    "github.com/Charlie-belmer/nosqli/scanutil"
+    "github.com/Charlie-belmer/nosqli/scanners"
 )
 
 // scanCmd represents the scan command
@@ -36,7 +38,13 @@ Examples:
     nosqli scan -u http://localhost/page?id=5`,
     Run: func(cmd *cobra.Command, args []string) {
         fmt.Printf("Running scan on %s...\n\n", target)
-        baseline()
+        //q := getQueryParams(target)
+        //fmt.Println(q)
+        //scanutil.Get(target)
+        scanners.ErrorBasedInjectionTest(target)
+        //att := scanutil.NewAttackObject(target)
+        //ret, _ := att.GET()
+        //fmt.Println(ret)
     },
 }
 
@@ -63,18 +71,19 @@ func baseline() {
     fmt.Println(string(body))
 }
 
-
-
-func subQueryString(url string, param string, sub string) {
-    u, err := url.Parse(target)
-    if err != nil {
-        log.Fatal(err)
-    }
-    q := u.Query()
-    //https://golang.org/pkg/net/url/#URL.Query
-    //TODO: check that param exists, else return error
-    //return updated URL with param replaced with sub.
+/**
+Parse the URL, and return a map or params and values.
+Values will be the presumably default vaules passed via CLI.
+**/
+func getQueryParams(uri string) {
+    //u, err := url.Parse(target)
+    //if err != nil {
+    //    log.Fatal(err)
+    //}
+    //return u.Query()
 }
+
+
 /* Tests:
  - Check for error text in the response. Sample: 
  Fatal error: Uncaught MongoDB\Driver\Exception\CommandException: unknown operator: $ in /var/www/html/user_lookup.php:37 Stack trace: #0 /var/www/html/user_lookup.php(37): MongoDB\Driver\Manager->executeQuery('sans.users', Object(MongoDB\Driver\Query)) #1 {main} thrown in /var/www/html/user_lookup.php on line 37
