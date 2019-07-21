@@ -16,6 +16,14 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 package data
 
+/**
+
+TOOL CONSTANTS
+
+**/
+var Version string = "0.1"
+var VersionName string = "Pre-Release Alpha"
+
 
 /**
 
@@ -30,3 +38,11 @@ var MongoErrorStrings = []string{
 	`(?i)SyntaxError`,
 	`(?i)unterminated string literal`,
 }
+//TODO: data to insert into GET keys like search[$gt]=h
+
+/* data extraction payload resources:
+ https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/NoSQL%20Injection
+ https://packetstormsecurity.com/files/107999/Time-Based-Blind-NoSQL-Injection.html
+ https://blog.rapid7.com/2014/06/12/you-have-no-sql-inj-sorry-nosql-injections-in-your-application/
+ https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/NoSQL%20Injection
+*/ 

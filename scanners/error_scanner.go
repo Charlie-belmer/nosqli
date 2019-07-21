@@ -28,16 +28,19 @@ import (
 Run injection tests looking for error strings being returned
 in the reponse.
 **/
-func ErrorBasedInjectionTest(url string) {
-	att := scanutil.NewAttackObject(url)
+func ErrorBasedInjectionTest(att scanutil.AttackObject) {
+	//att := scanutil.NewAttackObject(url)
 	for _, character := range data.MongoSpecialCharacters {
 		for k, v := range att.QueryParams() {
 			att.SetQueryParam(k, character)
-			res, _ := att.GET()
+			res, _ := att.Send()
 			searchErrors(res.Body)
 			att.SetQueryParam(k, v)	//reset value to default
 		}
 	}
+	//att.SetBodyParam()
+	att.Send()
+
 }
 
 func searchErrors(body string) {
@@ -47,7 +50,8 @@ func searchErrors(body string) {
 	        log.Fatal(err)
 	    }
 		if matched {
-			fmt.Println("Matched a NoSQL Injection Error!\n")
+			fmt.Println("Matched a probable NoSQL Injection Error!\n")
+			return
 		}
 	}
 }

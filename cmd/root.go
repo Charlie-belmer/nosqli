@@ -26,10 +26,12 @@ import (
 
 )
 
-var version string = "0.1"
-var versionName string = "Pre-Release Alpha"
 var cfgFile string
 var target string
+var request string
+var proxy string
+var userAgent string
+var requestData string
 
 
 // rootCmd represents the base command when called without any subcommands
@@ -64,7 +66,11 @@ func init() {
 
   rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.nosqli.yaml)")
   rootCmd.PersistentFlags().StringVarP(&target, "target", "t", "", "target url eg. http://site.com/page?arg=1")
- 
+  rootCmd.PersistentFlags().StringVarP(&request, "request", "r", "", "Load in a request from a file, such as a request generated in Burp or ZAP.")
+  rootCmd.PersistentFlags().StringVarP(&proxy, "proxy", "p", "", "Proxy requests through this proxy URL. Defaults to HTTP_PROXY environment variable.")
+  rootCmd.PersistentFlags().StringVarP(&userAgent, "user-agent", "u", "", "Specify a user agent")
+  rootCmd.PersistentFlags().StringVarP(&requestData, "data", "d", "", "Specify default post data (should not include any injection strings)")
+
 }
 
 

@@ -14,24 +14,39 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-package cmd
+package scanutil
 
 import (
+	"os"
 	"fmt"
 	"github.com/Charlie-belmer/nosqli/data"
-	"github.com/spf13/cobra"
 )
 
-// versionCmd represents the version command
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Prints the current version",
-	Long: `Prints the current version`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("%s v%s\n", data.VersionName, data.Version)
-	},
+/*
+ *	Struct to store and manage scan options and defaults
+ */
+type ScanOptions struct {
+	Target string
+	Request string
+	ProxyInput string
+	UserAgentInput string
+	RequestData string
 }
 
-func init() {
-	rootCmd.AddCommand(versionCmd)
+func (s *ScanOptions) Proxy() string {
+	if s.ProxyInput == "" {
+		return os.Getenv("HTTP_PROXY")
+	} else {
+		return s.ProxyInput
+	}
+
+}
+
+func (s *ScanOptions) UserAgent() string {
+	if s.UserAgentInput == "" {
+		return fmt.Sprintf("NoSQLInjector: %s v%s", data.VersionName, data.Version)
+	} else {
+		return s.UserAgentInput
+	}
+
 }
