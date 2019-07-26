@@ -16,9 +16,28 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 package scanutil
 
+import (
+	"reflect"
+)
+
 type HTTPResponseObject struct {
     Url string
     Body string
     Header map[string][]string
     StatusCode int
+}
+
+/** 
+ * Determine if a given response object is equal to this object.
+ *
+ * URL is not used in this determination. If two different URL's return the same
+ * response code and body, they are considered equal. For instance a URL that includes
+ * a boolean attack pattern may have differing URL's, and the same reponse, which can be used
+ * to determine information from the server.
+ */
+func (this *HTTPResponseObject) ContentEquals(cmp HTTPResponseObject) bool {
+	statusEquals := this.StatusCode == cmp.StatusCode
+	headerEquals := reflect.DeepEqual(this.Header, cmp.Header)
+	bodyEquals := this.Body == cmp.Body
+	return statusEquals && headerEquals && bodyEquals
 }

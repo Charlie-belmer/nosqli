@@ -30,28 +30,94 @@ in the reponse.
 **/
 func ErrorBasedInjectionTest(att scanutil.AttackObject) {
 	//att := scanutil.NewAttackObject(url)
-	for _, character := range data.MongoSpecialCharacters {
-		for k, v := range att.QueryParams() {
-			att.SetQueryParam(k, character)
-			res, _ := att.Send()
-			searchErrors(res.Body)
-			att.SetQueryParam(k, v)	//reset value to default
-		}
-	}
-	//att.SetBodyParam()
-	att.Send()
-
+	injectSpecialCharsIntoQuery(att)
+	injectSpecialCharsIntoBody(att)
 }
 
-func searchErrors(body string) {
-	for _, pattern := range data.MongoErrorStrings {
+func hasNOSQLError(body string) bool {
+	mongoErrors := searchError(body, data.MongoErrorStrings)
+	mongooseErrors := searchError(body, data.MongooseErrorStrings) 
+	
+	return mongoErrors || mongooseErrors
+}
+
+
+func searchError(body string, errorList []string) bool {
+	for _, pattern := range errorList {
 		matched, err := regexp.MatchString(pattern, body)
 		if err != nil {
 	        log.Fatal(err)
 	    }
 		if matched {
-			fmt.Println("Matched a probable NoSQL Injection Error!\n")
-			return
+			return true
+		}
+	}
+	return false
+}
+
+/** 
+ * Inject characters that can cause webservers to return an error
+ * if they are not properly escaping data passed in via
+ * GET requests.
+ */
+func injectSpecialCharsIntoQuery(att scanutil.AttackObject) {
+	iterateGetInjections(att, data.MongoSpecialCharacters, false)
+	iterateGetInjections(att, data.MongoSpecialKeyCharacters, true)
+}
+
+/** 
+ * Inject characters that can cause webservers to return an error
+ * if they are not properly escaping data passed in via
+ * POST requests in the body.
+ */
+func injectSpecialCharsIntoBody(att scanutil.AttackObject) {
+	iterateBodyInjections(att, data.MongoSpecialCharacters, false)
+	iterateBodyInjections(att, data.MongoSpecialKeyCharacters, true)
+	iterateBodyInjections(att, data.MongoJSONErrorAttacks, true)
+}
+
+func iterateBodyInjections(att scanutil.AttackObject, injectionList []string, injectKeys bool) {
+	for _, injection := range injectionList {
+		for _, pattern := range att.BodyValues {
+			att.ReplaceBodyObject(pattern, injection, injectKeys)
+			res, _ := att.Send()
+			if hasNOSQLError(res.Body) {
+				fmt.Println("Matched a probable NoSQL Injection Error (Based on error message):")
+				fmt.Printf("  URL: %s\n", att.Request.URL)
+				fmt.Printf("  body: %s\n\n", att.Body)
+			}
+
+			att.RestoreBody()	//reset value to default
+		}
+	}
+}
+
+func iterateGetInjections(att scanutil.AttackObject, injectionList []string, injectKeys bool) {
+	for _, injection := range injectionList {
+		for k, v := range att.QueryParams() {
+			injectedValue := v
+			injectedKey := k
+			if injectKeys {
+				att.ReplaceQueryParam(k, k + injection, v)
+				injectedKey = k + injection
+			} else {
+				att.SetQueryParam(k, injection)
+				injectedValue = injection
+			}
+			res, _ := att.Send()
+			if hasNOSQLError(res.Body) {
+				fmt.Println("Matched a probable NoSQL Injection Error (Based on error message):")
+				fmt.Printf("  URL: %s\n", att.Request.URL)
+				fmt.Printf("  param: %s\n", k)
+				fmt.Printf("  Injection: %s=%s\n\n", injectedKey, injectedValue)
+			}
+
+			//reset value to default
+			if injectKeys {
+				att.ReplaceQueryParam(k + injection, k, v)
+			} else {
+				att.SetQueryParam(k, v)
+			}
 		}
 	}
 }

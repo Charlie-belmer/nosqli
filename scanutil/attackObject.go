@@ -92,6 +92,8 @@ func parseRequest(file string) AttackObject {
 	buf := new(bytes.Buffer)
     buf.ReadFrom(obj.Request.Body)
     obj.Body = 	buf.String()
+    obj.originalBody = obj.Body
+    obj.extractUpdateableValuesFromBody()
 
     return obj
 }
@@ -148,6 +150,16 @@ func (a *AttackObject) SetQueryParam(key string, payload string) {
     q := a.Request.URL.Query()
     q[key][0] = payload
     a.Request.URL.RawQuery = q.Encode()
+}
+
+/**
+ * Remove an oldkey/value pair, and replace it with a new key value pair
+ */
+func (a *AttackObject) ReplaceQueryParam(oldkey string, key string, value string) {
+	q := a.Request.URL.Query()
+	q.Del(oldkey)
+	q.Add(key, value)
+	a.Request.URL.RawQuery = q.Encode()
 }
 
 /**
@@ -245,6 +257,7 @@ func (a *AttackObject) ReplaceBodyObject(pattern string, payload string, replace
 	} else {
 		a.setBodyQueryParam(pattern, payload, replaceKey)
 	}
+	a.Request.ContentLength = int64(len(a.Body))
 }
 
 func (a *AttackObject) bodyIsJSON() bool {
@@ -269,12 +282,13 @@ func (a *AttackObject) SetBody(body string) {
 
 	if isJSON(a.Body) {
     	a.Request.Header.Set("Content-Type", "application/json")
-    	a.BodyValues = FlattenJSON(body)
     } else {
     	a.Request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
     	a.urlEncodeBody()
-    	a.extractUpdateableValuesFromBody(body)
+    	a.originalBody = a.Body
     }
+    a.extractUpdateableValuesFromBody()
+    a.Request.ContentLength = int64(len(a.Body))
 }
 
 /** 
@@ -295,24 +309,35 @@ func (a *AttackObject) urlEncodeBody() {
  */
 func (a *AttackObject) RestoreBody() {
 	a.Body = a.originalBody
+	a.Request.ContentLength = int64(len(a.Body))
 }
 
 /**
  * Pull out any values we might want to replace with injection strings,
  * and save them into the attack object.
  */ 
-func (a *AttackObject) extractUpdateableValuesFromBody(body string){
-	u, err := url.ParseRequestURI("/?" + a.Body)
+func (a *AttackObject) extractUpdateableValuesFromBody(){
+	if isJSON(a.Body) {
+    	a.BodyValues = FlattenJSON(a.Body)
+    } else {
+    	a.BodyValues = extractUpdateableQueryValuesFromBody(a.Body)
+    }
+}
+
+func extractUpdateableQueryValuesFromBody(body string) []string {
+	var values []string
+	u, err := url.ParseRequestURI("/?" + body)
 	if err != nil {
 		log.Fatal(err)
 	}
 	q := u.Query()
 	for k, v := range q {
-		a.BodyValues = append(a.BodyValues, k)
+		values = append(values, k)
 		for _, val := range v {
-			a.BodyValues = append(a.BodyValues, val)
+			values = append(values, val)
 		}
 	}
+	return values
 }
 
 /**
@@ -329,7 +354,6 @@ func (a *AttackObject) setRequestBody() {
 func (a *AttackObject) Send() (HTTPResponseObject, error) {
 	a.setRequestBody()
 	url := a.Request.URL.String()
-	fmt.Printf("Running request for %s\n", url)
 	obj := HTTPResponseObject{url, "", nil, 0}
 
     resp, err := a.Client.Do(a.Request)

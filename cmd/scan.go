@@ -43,6 +43,8 @@ Examples:
 
         fmt.Printf("Running Error based scan...\n")
         scanners.ErrorBasedInjectionTest(attackObj)
+        fmt.Printf("Running Boolean based scan...\n")
+        scanners.BlindBooleanInjectionTest(attackObj)
     },
 }
 

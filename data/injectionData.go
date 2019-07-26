@@ -31,12 +31,17 @@ MONGO DATA
 
 **/
 var MongoSpecialCharacters = []string{ "'", "\"", "$", ".", ">", "[", "]" }
+var MongoSpecialKeyCharacters = []string{"[$]"}
+var MongoJSONErrorAttacks = []string{`{"foo": 1}`}
 var MongoPrefixes = []string{ "'", "\"", }
 var MongoErrorStrings = []string{ 
 	`Uncaught MongoDB\\Driver\\Exception\\CommandException: unknown operator`,
 	`(?i)MongoError`,
-	`(?i)SyntaxError`,
 	`(?i)unterminated string literal`,
+}
+
+var MongooseErrorStrings = []string{
+	`(?i)Cast to string failed for value`, // Seen when object being passed when string expected. May indicate that objects will be parsed as objects.
 }
 //TODO: data to insert into GET keys like search[$gt]=h
 
