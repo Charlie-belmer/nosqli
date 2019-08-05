@@ -195,13 +195,29 @@ func (a *AttackObject) setBodyQueryParam(pattern string, payload string, replace
  * if the payload is a string, it should include double quotes, like `"payload"`, if an
  * object, include the full object notation such as `{"$ne": 1}`
  */
-func (a *AttackObject) setBodyJSONParam(pattern string, payload string, replaceKey bool) error {
+func (a *AttackObject) setBodyJSONParam(pattern string, payload string, replaceKey bool, index int) error {
 	switch jsonType(pattern) {
 	case "string":
 		// string should be surrounded by double quotes
 		pattern = `"` + pattern + `"`
 		re := regexp.MustCompile(pattern)
-		a.Body = re.ReplaceAllString(a.Body, payload)
+		if index == -1 {
+			a.Body = re.ReplaceAllLiteralString(a.Body, payload)
+		} else {
+			var newBody string
+			components := re.Split(pattern, -1)
+			for i, substring := range(components) {
+
+				if i == index {
+					newBody = newBody + substring + payload
+				} else if i == len(components) - 1 {
+					newBody = newBody + substring
+				} else {
+					newBody = newBody + substring + pattern
+				}
+			}
+			a.Body = newBody
+		}
 	case "number", "boolean", "null":
 		// objects that are not enclosed with quotes should always be values (not keys)
 		// and thus prefixed with a colon or object opener and zero or more spaces
@@ -227,13 +243,29 @@ func (a *AttackObject) setBodyJSONParam(pattern string, payload string, replaceK
 			newRegex = finding["Prefix"] + finding["Payload"] + finding["Suffix"]
 			newPayload = finding["Prefix"] + payload + finding["Suffix"]
 			re = regexp.MustCompile(newRegex)
-			a.Body = re.ReplaceAllString(a.Body, newPayload)
+			a.Body = re.ReplaceAllLiteralString(a.Body, newPayload)
 		}
 		
 	default:
 		// array or object should be ok as-is, just use string replace
-		a.Body = strings.ReplaceAll(a.Body, pattern, payload)
-	}
+		if index >= 0 {
+			//a.Body = strings.Replace(a.Body, pattern, payload, index+1)
+			var newBody string
+			components := strings.Split(a.Body, pattern)
+			for i, substring := range(components) {
+				if i == index {
+					newBody = newBody + substring + payload
+				} else if i == len(components) - 1 {
+					newBody = newBody + substring
+				} else {
+					newBody = newBody + substring + pattern
+				}
+			}
+			a.Body = newBody
+		} else {
+			a.Body = strings.ReplaceAll(a.Body, pattern, payload)
+		}
+			}
 	return nil
 }
 
@@ -249,11 +281,13 @@ func (a *AttackObject) setBodyJSONParam(pattern string, payload string, replaceK
  * "alue"
  *
  * Only replaces keys if inKey is set to true, so that data like username=username can be 
- * injected one at a time (key injections are rare)
+ * injected one at a time (key injections are rare) (not used on JSON at this time).
+ *
+ * Index will replace the <index>th instance of pattern. index = -1 -> replace all, 0 -> replace the first instance.
  */
-func (a *AttackObject) ReplaceBodyObject(pattern string, payload string, replaceKey bool) {
+func (a *AttackObject) ReplaceBodyObject(pattern string, payload string, replaceKey bool, index int) {
 	if a.bodyIsJSON() {
-		a.setBodyJSONParam(pattern, payload, replaceKey)
+		a.setBodyJSONParam(pattern, payload, replaceKey, index)
 	} else {
 		a.setBodyQueryParam(pattern, payload, replaceKey)
 	}

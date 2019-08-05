@@ -29,7 +29,9 @@ var scanCmd = &cobra.Command{
     Use:   "scan",
     Short: "Scan endpoint for NoSQL Injection vectors",
     Long: `Scan an endpoint for NoSQL Injection vectors. This will return text 
-specifying whether an injection was successfully found or not.
+specifying whether an injection was successfully found or not. When passing in 
+values, it is important to try to pass in valid default values to maximize findings.
+For instance, if you wish to check user/password submissions, try to submit a valid username.
 
 Examples:
     nosqli scan -u http://localhost/page?id=5`,
@@ -41,11 +43,19 @@ Examples:
             log.Fatal(err)
         }
 
+        var injectables []scanutil.InjectionObject
         fmt.Printf("Running Error based scan...\n")
-        scanners.ErrorBasedInjectionTest(attackObj)
+        injectables = append(injectables, scanners.ErrorBasedInjectionTest(attackObj)...)
         fmt.Printf("Running Boolean based scan...\n")
-        scanners.BlindBooleanInjectionTest(attackObj)
+        injectables = append(injectables, scanners.BlindBooleanInjectionTest(attackObj)...)
+        display(injectables)
     },
+}
+
+func display(injectables []scanutil.InjectionObject) {
+    for _, in := range injectables {
+        in.Print()
+    }
 }
 
 func init() {

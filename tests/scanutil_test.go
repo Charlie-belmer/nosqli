@@ -192,3 +192,14 @@ func TestReplaceBodyQueryString(t *testing.T) {
 		t.Errorf("Integer value not replaced correctly.\nExpected: %s\nActual:   %s\n", expect, att.Body)
 	}
 }
+
+/** 
+ *	Ensure that injecting attack strings into QueryString bodies works as expected.
+ */
+func TestCombinations(t *testing.T) {
+	data := []string{"A", "B", "C", "D"}
+	//expect := []string{["A"], ["B"], ["C"], ["A", "B"], ["A", "C"], ["B", "C"], ["A", "B", "C"]}
+	for item := range(scanutil.Combinations(data)) {
+		fmt.Printf("Function generated %s\n",item)
+	}
+}

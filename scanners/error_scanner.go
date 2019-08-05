@@ -20,7 +20,6 @@ import (
 	"github.com/Charlie-belmer/nosqli/scanutil"
 	"github.com/Charlie-belmer/nosqli/data"
 	"regexp"
-    "fmt"
     "log"
 )
 
@@ -28,10 +27,11 @@ import (
 Run injection tests looking for error strings being returned
 in the reponse.
 **/
-func ErrorBasedInjectionTest(att scanutil.AttackObject) {
-	//att := scanutil.NewAttackObject(url)
-	injectSpecialCharsIntoQuery(att)
-	injectSpecialCharsIntoBody(att)
+func ErrorBasedInjectionTest(att scanutil.AttackObject) []scanutil.InjectionObject {
+	var injectables []scanutil.InjectionObject
+	injectables = append(injectables, injectSpecialCharsIntoQuery(att)...)
+	injectables = append(injectables, injectSpecialCharsIntoBody(att)...)
+	return injectables
 }
 
 func hasNOSQLError(body string) bool {
@@ -60,9 +60,10 @@ func searchError(body string, errorList []string) bool {
  * if they are not properly escaping data passed in via
  * GET requests.
  */
-func injectSpecialCharsIntoQuery(att scanutil.AttackObject) {
-	iterateGetInjections(att, data.MongoSpecialCharacters, false)
-	iterateGetInjections(att, data.MongoSpecialKeyCharacters, true)
+func injectSpecialCharsIntoQuery(att scanutil.AttackObject) []scanutil.InjectionObject {
+	i := iterateGetInjections(att, data.MongoSpecialCharacters, false)
+	i = append(i, iterateGetInjections(att, data.MongoSpecialKeyCharacters, true)...)
+	return i
 }
 
 /** 
@@ -70,29 +71,37 @@ func injectSpecialCharsIntoQuery(att scanutil.AttackObject) {
  * if they are not properly escaping data passed in via
  * POST requests in the body.
  */
-func injectSpecialCharsIntoBody(att scanutil.AttackObject) {
-	iterateBodyInjections(att, data.MongoSpecialCharacters, false)
-	iterateBodyInjections(att, data.MongoSpecialKeyCharacters, true)
-	iterateBodyInjections(att, data.MongoJSONErrorAttacks, true)
+func injectSpecialCharsIntoBody(att scanutil.AttackObject) []scanutil.InjectionObject {
+	i :=iterateBodyInjections(att, data.MongoSpecialCharacters, false)
+	i = append(i, iterateBodyInjections(att, data.MongoSpecialKeyCharacters, true)...)
+	i = append(i, iterateBodyInjections(att, data.MongoJSONErrorAttacks, true)...)
+	return i
 }
 
-func iterateBodyInjections(att scanutil.AttackObject, injectionList []string, injectKeys bool) {
+func iterateBodyInjections(att scanutil.AttackObject, injectionList []string, injectKeys bool) []scanutil.InjectionObject {
+	var injectables []scanutil.InjectionObject
 	for _, injection := range injectionList {
 		for _, pattern := range att.BodyValues {
-			att.ReplaceBodyObject(pattern, injection, injectKeys)
+			att.ReplaceBodyObject(pattern, injection, injectKeys, -1)
 			res, _ := att.Send()
 			if hasNOSQLError(res.Body) {
-				fmt.Println("Matched a probable NoSQL Injection Error (Based on error message):")
-				fmt.Printf("  URL: %s\n", att.Request.URL)
-				fmt.Printf("  body: %s\n\n", att.Body)
+				var injectable = scanutil.InjectionObject{
+					Type: scanutil.Error, 
+					AttackObject: att,
+					InjectableParam: pattern,
+					InjectedParam: injection,
+				}
+				injectables =  append(injectables, injectable)
 			}
 
 			att.RestoreBody()	//reset value to default
 		}
 	}
+	return injectables
 }
 
-func iterateGetInjections(att scanutil.AttackObject, injectionList []string, injectKeys bool) {
+func iterateGetInjections(att scanutil.AttackObject, injectionList []string, injectKeys bool) []scanutil.InjectionObject {
+	var injectables []scanutil.InjectionObject
 	for _, injection := range injectionList {
 		for k, v := range att.QueryParams() {
 			injectedValue := v
@@ -106,10 +115,14 @@ func iterateGetInjections(att scanutil.AttackObject, injectionList []string, inj
 			}
 			res, _ := att.Send()
 			if hasNOSQLError(res.Body) {
-				fmt.Println("Matched a probable NoSQL Injection Error (Based on error message):")
-				fmt.Printf("  URL: %s\n", att.Request.URL)
-				fmt.Printf("  param: %s\n", k)
-				fmt.Printf("  Injection: %s=%s\n\n", injectedKey, injectedValue)
+				var injectable = scanutil.InjectionObject{
+					Type: scanutil.Error, 
+					AttackObject: att,
+					InjectableParam: k,
+					InjectedParam: injectedKey,
+					InjectedValue: injectedValue,
+				}
+				injectables = append(injectables, injectable)
 			}
 
 			//reset value to default
@@ -120,4 +133,5 @@ func iterateGetInjections(att scanutil.AttackObject, injectionList []string, inj
 			}
 		}
 	}
+	return injectables
 }
