@@ -26,7 +26,7 @@ import (
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Prints the current version",
-	Long: `Prints the current version`,
+	Long:  `Prints the current version`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("%s v%s\n", data.VersionName, data.Version)
 	},

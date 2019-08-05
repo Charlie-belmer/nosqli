@@ -17,55 +17,55 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package scanutil
 
 import (
-    "fmt"
-    "net/url"
-    "net/http"
-    "io/ioutil"
-    "log"
-    "errors"
-    "time"
-    "bufio"
-    "os"
-    "bytes"
-    "strings"
-    "regexp"
+	"bufio"
+	"bytes"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"net/url"
+	"os"
+	"regexp"
+	"strings"
+	"time"
 )
 
 /**
- *  An object to manage attack payloads and structures. 
+ *  An object to manage attack payloads and structures.
  */
 type AttackObject struct {
-	Request *http.Request
-    Client *http.Client
-    Options ScanOptions
-    Body string
-    originalBody string  // Keep the original body, so we can reset it after injecting attack strings.
-    BodyValues []string  // List of all values that can be updated. May include maps or arrays (if body is JSON) - but as Strings
+	Request      *http.Request
+	Client       *http.Client
+	Options      ScanOptions
+	Body         string
+	originalBody string   // Keep the original body, so we can reset it after injecting attack strings.
+	BodyValues   []string // List of all values that can be updated. May include maps or arrays (if body is JSON) - but as Strings
 }
 
 func NewAttackObject(options ScanOptions) (AttackObject, error) {
 	attackObj := AttackObject{}
 
 	if options.Request != "" {
-        attackObj = parseRequest(options.Request)
-    } else if options.Target != "" {
-        var err error
-	    attackObj.Request, err = http.NewRequest("", options.Target, nil)
-	    if err != nil {
-	    	log.Fatal(err)
-	    }
-    } else {
-        return attackObj, errors.New("You must specify either a target or a request file to scan.")
-    }
+		attackObj = parseRequest(options.Request)
+	} else if options.Target != "" {
+		var err error
+		attackObj.Request, err = http.NewRequest("", options.Target, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		return attackObj, errors.New("You must specify either a target or a request file to scan.")
+	}
 
-    if options.RequestData != "" {
-    	attackObj.SetBody(options.RequestData)
-    }
+	if options.RequestData != "" {
+		attackObj.SetBody(options.RequestData)
+	}
 
-    attackObj.Options = options
-    attackObj.addClient()
-    attackObj.Request.Header.Set("User-Agent", options.UserAgent())
-    return attackObj, nil
+	attackObj.Options = options
+	attackObj.addClient()
+	attackObj.Request.Header.Set("User-Agent", options.UserAgent())
+	return attackObj, nil
 }
 
 func parseRequest(file string) AttackObject {
@@ -84,18 +84,17 @@ func parseRequest(file string) AttackObject {
 	obj.Request.RequestURI = ""
 	obj.Request.URL, err = url.Parse("http://" + obj.Request.Host + obj.Request.URL.String())
 	if err != nil {
-		log.Fatal( err )
+		log.Fatal(err)
 	}
 	obj.addClient()
 
-
 	buf := new(bytes.Buffer)
-    buf.ReadFrom(obj.Request.Body)
-    obj.Body = 	buf.String()
-    obj.originalBody = obj.Body
-    obj.extractUpdateableValuesFromBody()
+	buf.ReadFrom(obj.Request.Body)
+	obj.Body = buf.String()
+	obj.originalBody = obj.Body
+	obj.extractUpdateableValuesFromBody()
 
-    return obj
+	return obj
 }
 
 /**
@@ -104,7 +103,7 @@ func parseRequest(file string) AttackObject {
 func (a *AttackObject) addClient() {
 	proxy := a.Options.Proxy()
 	transport := &http.Transport{}
-	
+
 	if proxy != "" {
 		proxyURL, err := url.Parse(proxy)
 		if err != nil {
@@ -114,9 +113,9 @@ func (a *AttackObject) addClient() {
 		transport.Proxy = http.ProxyURL(proxyURL)
 	}
 	a.Client = &http.Client{
-        Timeout: 30 * time.Second,
-        Transport: transport,
-    }
+		Timeout:   30 * time.Second,
+		Transport: transport,
+	}
 }
 
 /**
@@ -124,10 +123,10 @@ func (a *AttackObject) addClient() {
  */
 func (a *AttackObject) SetURL(u string) {
 	parsedURL, err := url.Parse(u)
-    if err != nil {
-        log.Fatal(err)
-    }
-    a.Request.URL = parsedURL
+	if err != nil {
+		log.Fatal(err)
+	}
+	a.Request.URL = parsedURL
 }
 
 /**
@@ -143,13 +142,13 @@ func (a *AttackObject) QueryParams() map[string]string {
 }
 
 /**
- * Change a query param in the request query string. Use this to 
+ * Change a query param in the request query string. Use this to
  * attempt nosql injection via GET paramaters.
  */
 func (a *AttackObject) SetQueryParam(key string, payload string) {
-    q := a.Request.URL.Query()
-    q[key][0] = payload
-    a.Request.URL.RawQuery = q.Encode()
+	q := a.Request.URL.Query()
+	q[key][0] = payload
+	a.Request.URL.RawQuery = q.Encode()
 }
 
 /**
@@ -177,7 +176,7 @@ func (a *AttackObject) setBodyQueryParam(pattern string, payload string, replace
 			q[payload] = vSlice
 			delete(q, key)
 		} else {
-			for i,v := range vSlice {
+			for i, v := range vSlice {
 				if url.QueryEscape(v) == pattern {
 					vSlice[i] = payload
 				}
@@ -191,7 +190,7 @@ func (a *AttackObject) setBodyQueryParam(pattern string, payload string, replace
 
 /**
  * Replace part of the JSON object with a payload
- * The payload should be proper JSON as it will completely replace an existing element - 
+ * The payload should be proper JSON as it will completely replace an existing element -
  * if the payload is a string, it should include double quotes, like `"payload"`, if an
  * object, include the full object notation such as `{"$ne": 1}`
  */
@@ -206,11 +205,11 @@ func (a *AttackObject) setBodyJSONParam(pattern string, payload string, replaceK
 		} else {
 			var newBody string
 			components := re.Split(pattern, -1)
-			for i, substring := range(components) {
+			for i, substring := range components {
 
 				if i == index {
 					newBody = newBody + substring + payload
-				} else if i == len(components) - 1 {
+				} else if i == len(components)-1 {
 					newBody = newBody + substring
 				} else {
 					newBody = newBody + substring + pattern
@@ -233,10 +232,10 @@ func (a *AttackObject) setBodyJSONParam(pattern string, payload string, replaceK
 		for _, submatch := range submatches {
 			m = make(map[string]string)
 			for i, n := range submatch {
-	            m[names[i]] = n
-	        }
-	        m2 = append(m2,m)
-	    }
+				m[names[i]] = n
+			}
+			m2 = append(m2, m)
+		}
 		var newRegex string
 		var newPayload string
 		for _, finding := range m2 {
@@ -245,17 +244,17 @@ func (a *AttackObject) setBodyJSONParam(pattern string, payload string, replaceK
 			re = regexp.MustCompile(newRegex)
 			a.Body = re.ReplaceAllLiteralString(a.Body, newPayload)
 		}
-		
+
 	default:
 		// array or object should be ok as-is, just use string replace
 		if index >= 0 {
 			//a.Body = strings.Replace(a.Body, pattern, payload, index+1)
 			var newBody string
 			components := strings.Split(a.Body, pattern)
-			for i, substring := range(components) {
+			for i, substring := range components {
 				if i == index {
 					newBody = newBody + substring + payload
-				} else if i == len(components) - 1 {
+				} else if i == len(components)-1 {
 					newBody = newBody + substring
 				} else {
 					newBody = newBody + substring + pattern
@@ -265,7 +264,7 @@ func (a *AttackObject) setBodyJSONParam(pattern string, payload string, replaceK
 		} else {
 			a.Body = strings.ReplaceAll(a.Body, pattern, payload)
 		}
-			}
+	}
 	return nil
 }
 
@@ -276,11 +275,11 @@ func (a *AttackObject) setBodyJSONParam(pattern string, payload string, replaceK
  * but an int should be surrounded by some combination of white space, commas, or object/array
  * closures.
  *
- * This function assumes the pattern being replaced is a complete object - for instance 
- * if the body contains '"key": "value"', we would only replace "key" or "value", but never 
+ * This function assumes the pattern being replaced is a complete object - for instance
+ * if the body contains '"key": "value"', we would only replace "key" or "value", but never
  * "alue"
  *
- * Only replaces keys if inKey is set to true, so that data like username=username can be 
+ * Only replaces keys if inKey is set to true, so that data like username=username can be
  * injected one at a time (key injections are rare) (not used on JSON at this time).
  *
  * Index will replace the <index>th instance of pattern. index = -1 -> replace all, 0 -> replace the first instance.
@@ -299,7 +298,6 @@ func (a *AttackObject) bodyIsJSON() bool {
 	return contentType == "application/json"
 }
 
-
 /**
  * Update the request body with a payload
  */
@@ -315,17 +313,17 @@ func (a *AttackObject) SetBody(body string) {
 	}
 
 	if isJSON(a.Body) {
-    	a.Request.Header.Set("Content-Type", "application/json")
-    } else {
-    	a.Request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-    	a.urlEncodeBody()
-    	a.originalBody = a.Body
-    }
-    a.extractUpdateableValuesFromBody()
-    a.Request.ContentLength = int64(len(a.Body))
+		a.Request.Header.Set("Content-Type", "application/json")
+	} else {
+		a.Request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		a.urlEncodeBody()
+		a.originalBody = a.Body
+	}
+	a.extractUpdateableValuesFromBody()
+	a.Request.ContentLength = int64(len(a.Body))
 }
 
-/** 
+/**
  * URL encode a body to it matches application/x-www-form-urlencoded
  * content type.
  */
@@ -349,13 +347,13 @@ func (a *AttackObject) RestoreBody() {
 /**
  * Pull out any values we might want to replace with injection strings,
  * and save them into the attack object.
- */ 
-func (a *AttackObject) extractUpdateableValuesFromBody(){
+ */
+func (a *AttackObject) extractUpdateableValuesFromBody() {
 	if isJSON(a.Body) {
-    	a.BodyValues = FlattenJSON(a.Body)
-    } else {
-    	a.BodyValues = extractUpdateableQueryValuesFromBody(a.Body)
-    }
+		a.BodyValues = FlattenJSON(a.Body)
+	} else {
+		a.BodyValues = extractUpdateableQueryValuesFromBody(a.Body)
+	}
 }
 
 func extractUpdateableQueryValuesFromBody(body string) []string {
@@ -379,7 +377,7 @@ func extractUpdateableQueryValuesFromBody(body string) []string {
  * Encode if a query string is used.
  */
 func (a *AttackObject) setRequestBody() {
-    a.Request.Body = ioutil.NopCloser(strings.NewReader(a.Body))
+	a.Request.Body = ioutil.NopCloser(strings.NewReader(a.Body))
 }
 
 /**
@@ -390,25 +388,25 @@ func (a *AttackObject) Send() (HTTPResponseObject, error) {
 	url := a.Request.URL.String()
 	obj := HTTPResponseObject{url, "", nil, 0}
 
-    resp, err := a.Client.Do(a.Request)
+	resp, err := a.Client.Do(a.Request)
 
-    if err != nil {
-        log.Fatal(err)
-        return obj, errors.New("Unable to retrieve url")
-    }
+	if err != nil {
+		log.Fatal(err)
+		return obj, errors.New("Unable to retrieve url")
+	}
 
-    obj.Header = resp.Header
-    obj.StatusCode = resp.StatusCode
+	obj.Header = resp.Header
+	obj.StatusCode = resp.StatusCode
 
-    defer resp.Body.Close()
+	defer resp.Body.Close()
 
-    body, err := ioutil.ReadAll(resp.Body)
-    if err != nil {
-        fmt.Println(err)
-        return obj, errors.New("Unable to read response body")
-    }
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println(err)
+		return obj, errors.New("Unable to read response body")
+	}
 
-    obj.Body = string(body)
+	obj.Body = string(body)
 
-    return obj, nil
+	return obj, nil
 }

@@ -17,13 +17,13 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package scanners
 
 import (
-	"github.com/Charlie-belmer/nosqli/scanutil"
 	"github.com/Charlie-belmer/nosqli/data"
+	"github.com/Charlie-belmer/nosqli/scanutil"
+	"log"
 	"regexp"
-    "log"
 )
 
-/** 
+/**
 Run injection tests looking for error strings being returned
 in the reponse.
 **/
@@ -36,18 +36,17 @@ func ErrorBasedInjectionTest(att scanutil.AttackObject) []scanutil.InjectionObje
 
 func hasNOSQLError(body string) bool {
 	mongoErrors := searchError(body, data.MongoErrorStrings)
-	mongooseErrors := searchError(body, data.MongooseErrorStrings) 
-	
+	mongooseErrors := searchError(body, data.MongooseErrorStrings)
+
 	return mongoErrors || mongooseErrors
 }
-
 
 func searchError(body string, errorList []string) bool {
 	for _, pattern := range errorList {
 		matched, err := regexp.MatchString(pattern, body)
 		if err != nil {
-	        log.Fatal(err)
-	    }
+			log.Fatal(err)
+		}
 		if matched {
 			return true
 		}
@@ -55,7 +54,7 @@ func searchError(body string, errorList []string) bool {
 	return false
 }
 
-/** 
+/**
  * Inject characters that can cause webservers to return an error
  * if they are not properly escaping data passed in via
  * GET requests.
@@ -66,13 +65,13 @@ func injectSpecialCharsIntoQuery(att scanutil.AttackObject) []scanutil.Injection
 	return i
 }
 
-/** 
+/**
  * Inject characters that can cause webservers to return an error
  * if they are not properly escaping data passed in via
  * POST requests in the body.
  */
 func injectSpecialCharsIntoBody(att scanutil.AttackObject) []scanutil.InjectionObject {
-	i :=iterateBodyInjections(att, data.MongoSpecialCharacters, false)
+	i := iterateBodyInjections(att, data.MongoSpecialCharacters, false)
 	i = append(i, iterateBodyInjections(att, data.MongoSpecialKeyCharacters, true)...)
 	i = append(i, iterateBodyInjections(att, data.MongoJSONErrorAttacks, true)...)
 	return i
@@ -86,15 +85,15 @@ func iterateBodyInjections(att scanutil.AttackObject, injectionList []string, in
 			res, _ := att.Send()
 			if hasNOSQLError(res.Body) {
 				var injectable = scanutil.InjectionObject{
-					Type: scanutil.Error, 
-					AttackObject: att,
+					Type:            scanutil.Error,
+					AttackObject:    att,
 					InjectableParam: pattern,
-					InjectedParam: injection,
+					InjectedParam:   injection,
 				}
-				injectables =  append(injectables, injectable)
+				injectables = append(injectables, injectable)
 			}
 
-			att.RestoreBody()	//reset value to default
+			att.RestoreBody() //reset value to default
 		}
 	}
 	return injectables
@@ -107,7 +106,7 @@ func iterateGetInjections(att scanutil.AttackObject, injectionList []string, inj
 			injectedValue := v
 			injectedKey := k
 			if injectKeys {
-				att.ReplaceQueryParam(k, k + injection, v)
+				att.ReplaceQueryParam(k, k+injection, v)
 				injectedKey = k + injection
 			} else {
 				att.SetQueryParam(k, injection)
@@ -116,18 +115,18 @@ func iterateGetInjections(att scanutil.AttackObject, injectionList []string, inj
 			res, _ := att.Send()
 			if hasNOSQLError(res.Body) {
 				var injectable = scanutil.InjectionObject{
-					Type: scanutil.Error, 
-					AttackObject: att,
+					Type:            scanutil.Error,
+					AttackObject:    att,
 					InjectableParam: k,
-					InjectedParam: injectedKey,
-					InjectedValue: injectedValue,
+					InjectedParam:   injectedKey,
+					InjectedValue:   injectedValue,
 				}
 				injectables = append(injectables, injectable)
 			}
 
 			//reset value to default
 			if injectKeys {
-				att.ReplaceQueryParam(k + injection, k, v)
+				att.ReplaceQueryParam(k+injection, k, v)
 			} else {
 				att.SetQueryParam(k, v)
 			}

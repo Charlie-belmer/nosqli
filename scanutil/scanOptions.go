@@ -17,20 +17,20 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package scanutil
 
 import (
-	"os"
 	"fmt"
 	"github.com/Charlie-belmer/nosqli/data"
+	"os"
 )
 
 /*
  *	Struct to store and manage scan options and defaults
  */
 type ScanOptions struct {
-	Target string
-	Request string
-	ProxyInput string
+	Target         string
+	Request        string
+	ProxyInput     string
 	UserAgentInput string
-	RequestData string
+	RequestData    string
 }
 
 func (s *ScanOptions) Proxy() string {

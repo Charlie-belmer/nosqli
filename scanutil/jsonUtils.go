@@ -17,18 +17,18 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package scanutil
 
 /**
- * Because extracting and inserting attack strings into JSON bodies 
+ * Because extracting and inserting attack strings into JSON bodies
  * is a little more complicated.
  */
 
 import (
-	"github.com/buger/jsonparser"
 	"encoding/json"
+	"github.com/buger/jsonparser"
 )
 
 func isJSON(s string) bool {
 	var js map[string]interface{}
-	err := json.Unmarshal([]byte(s), &js) 
+	err := json.Unmarshal([]byte(s), &js)
 	return err == nil
 }
 
@@ -49,7 +49,7 @@ func jsonObjectHandler(jsonData []byte, flattenedSlice []string) []string {
 	jsonparser.ObjectEach(jsonData, func(key []byte, value []byte, dataType jsonparser.ValueType, offset int) error {
 		flattenedSlice = append(flattenedSlice, string(key))
 		flattenedSlice = append(flattenedSlice, string(value))
-		
+
 		switch dataType.String() {
 		case "object":
 			flattenedSlice = jsonObjectHandler(value, flattenedSlice)
@@ -59,7 +59,7 @@ func jsonObjectHandler(jsonData []byte, flattenedSlice []string) []string {
 		return nil
 	})
 	return flattenedSlice
-} 
+}
 
 /*
  * Takes a JSON object (as a string), and returns all keys and values in a string slice

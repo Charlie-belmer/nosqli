@@ -17,33 +17,33 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package scanutil
 
 import (
-    "fmt"
-    "crypto/md5"
+	"crypto/md5"
+	"fmt"
 )
 
 type InjectionType int
 
 const (
-    Blind = InjectionType(iota)
-    Timed
-    Error
+	Blind = InjectionType(iota)
+	Timed
+	Error
 )
 
 func (it InjectionType) String() string {
-    switch it {
-    case Blind:
-        return "Blind NoSQL Injection"
-    case Timed:
-        return "Timing based NoSQL Injection"
-    case Error:
-        return "Error based NoSQL Injection"
-    }
-    return ""
+	switch it {
+	case Blind:
+		return "Blind NoSQL Injection"
+	case Timed:
+		return "Timing based NoSQL Injection"
+	case Error:
+		return "Error based NoSQL Injection"
+	}
+	return ""
 }
 
 /**
- *  An object to manage discovered injections. 
- *   - AttackObject is the original (unmodified) request that a successful injection was discovered for. 
+ *  An object to manage discovered injections.
+ *   - AttackObject is the original (unmodified) request that a successful injection was discovered for.
  *   - InectableParam is the param to be replaced with an attack
  *   - InjectedParam is the final value of the param
  *   - InjectedValue is the final value given to the param
@@ -51,41 +51,41 @@ func (it InjectionType) String() string {
  * Some injection types won't have both an injected param and value.
  */
 type InjectionObject struct {
-    Type InjectionType
-    AttackObject AttackObject
-    InjectableParam string
-    InjectedParam string
-    InjectedValue string
+	Type            InjectionType
+	AttackObject    AttackObject
+	InjectableParam string
+	InjectedParam   string
+	InjectedValue   string
 }
 
 func (i *InjectionObject) Print() {
-    fmt.Printf("Found %s:\n", i.Type)
-    fmt.Printf("  URL: %s\n", i.AttackObject.Request.URL)
-    fmt.Printf("  param: %s\n", i.InjectableParam)
-    fmt.Printf("  Injection: %s=%s\n\n", i.InjectedParam, i.InjectedValue)
+	fmt.Printf("Found %s:\n", i.Type)
+	fmt.Printf("  URL: %s\n", i.AttackObject.Request.URL)
+	fmt.Printf("  param: %s\n", i.InjectableParam)
+	fmt.Printf("  Injection: %s=%s\n\n", i.InjectedParam, i.InjectedValue)
 }
 
 /**
  * Return a hash of this object
  */
 func (i *InjectionObject) Hash() string {
-    serial := string(i.Type) + i.AttackObject.Request.URL.String() + i.InjectableParam + i.InjectedParam + i.InjectedValue
-    md5 := md5.Sum([]byte(serial))
-    return string(md5[:])
+	serial := string(i.Type) + i.AttackObject.Request.URL.String() + i.InjectableParam + i.InjectedParam + i.InjectedValue
+	md5 := md5.Sum([]byte(serial))
+	return string(md5[:])
 }
 
 /**
  * Remove any duplicate items in a slice of InjectionObjects
- */ 
+ */
 func Unique(injections []InjectionObject) []InjectionObject {
-    found := make(map[string]bool)
-    var uniques []InjectionObject
+	found := make(map[string]bool)
+	var uniques []InjectionObject
 
-    for _, injection := range(injections) {
-        if !found[injection.Hash()] {
-            uniques = append(uniques, injection)
-        }
-        found[injection.Hash()] = true
-    }
-    return uniques
+	for _, injection := range injections {
+		if !found[injection.Hash()] {
+			uniques = append(uniques, injection)
+		}
+		found[injection.Hash()] = true
+	}
+	return uniques
 }

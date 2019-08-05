@@ -1,12 +1,12 @@
 package tests
 
 import (
-	"testing"
-	"github.com/Charlie-belmer/nosqli/scanutil"
-	"reflect"
 	"fmt"
-	"sort"
+	"github.com/Charlie-belmer/nosqli/scanutil"
 	"net/url"
+	"reflect"
+	"sort"
+	"testing"
 )
 
 func TestSetQueryParam(t *testing.T) {
@@ -42,9 +42,8 @@ func TestSetQueryParam(t *testing.T) {
 
 }
 
-
-/** 
- *	Make sure that when creating an object with a body that uses form values, 
+/**
+ *	Make sure that when creating an object with a body that uses form values,
  * that the form key and value data are correclty extracted.
  */
 func TestSetBodyQueryValues(t *testing.T) {
@@ -68,8 +67,8 @@ func TestSetBodyQueryValues(t *testing.T) {
 	}
 }
 
-/** 
- *	Make sure that when creating an object with a body that uses form values, 
+/**
+ *	Make sure that when creating an object with a body that uses form values,
  * that the form key and value data are correclty extracted.
  */
 func TestSetBodyJSON(t *testing.T) {
@@ -89,7 +88,7 @@ func TestSetBodyJSON(t *testing.T) {
 	}
 }
 
-/** 
+/**
  *	Ensure that injecting attack strings into JSON bodies works as expected.
  */
 func TestReplaceBodyJSON(t *testing.T) {
@@ -136,7 +135,7 @@ func TestReplaceBodyJSON(t *testing.T) {
 	}
 }
 
-/** 
+/**
  *	Ensure that injecting attack strings into QueryString bodies works as expected.
  */
 func TestReplaceBodyQueryString(t *testing.T) {
@@ -193,13 +192,13 @@ func TestReplaceBodyQueryString(t *testing.T) {
 	}
 }
 
-/** 
+/**
  *	Ensure that injecting attack strings into QueryString bodies works as expected.
  */
 func TestCombinations(t *testing.T) {
 	data := []string{"A", "B", "C", "D"}
 	//expect := []string{["A"], ["B"], ["C"], ["A", "B"], ["A", "C"], ["B", "C"], ["A", "B", "C"]}
-	for item := range(scanutil.Combinations(data)) {
-		fmt.Printf("Function generated %s\n",item)
+	for item := range scanutil.Combinations(data) {
+		fmt.Printf("Function generated %s\n", item)
 	}
 }

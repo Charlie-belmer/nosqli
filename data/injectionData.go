@@ -24,17 +24,16 @@ TOOL CONSTANTS
 var Version string = "0.1"
 var VersionName string = "Pre-Release Alpha"
 
-
 /**
 
 MONGO DATA
 
 **/
-var MongoSpecialCharacters = []string{ "'", "\"", "$", ".", ">", "[", "]" }
+var MongoSpecialCharacters = []string{"'", "\"", "$", ".", ">", "[", "]"}
 var MongoSpecialKeyCharacters = []string{"[$]"}
 var MongoJSONErrorAttacks = []string{`{"foo": 1}`}
-var MongoPrefixes = []string{ "'", "\"", }
-var MongoErrorStrings = []string{ 
+var MongoPrefixes = []string{"'", "\""}
+var MongoErrorStrings = []string{
 	`Uncaught MongoDB\\Driver\\Exception\\CommandException: unknown operator`,
 	`(?i)MongoError`,
 	`(?i)unterminated string literal`,
@@ -43,11 +42,12 @@ var MongoErrorStrings = []string{
 var MongooseErrorStrings = []string{
 	`(?i)Cast to string failed for value`, // Seen when object being passed when string expected. May indicate that objects will be parsed as objects.
 }
+
 //TODO: data to insert into GET keys like search[$gt]=h
 
 /* data extraction payload resources:
- https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/NoSQL%20Injection
- https://packetstormsecurity.com/files/107999/Time-Based-Blind-NoSQL-Injection.html
- https://blog.rapid7.com/2014/06/12/you-have-no-sql-inj-sorry-nosql-injections-in-your-application/
- https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/NoSQL%20Injection
-*/ 
+https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/NoSQL%20Injection
+https://packetstormsecurity.com/files/107999/Time-Based-Blind-NoSQL-Injection.html
+https://blog.rapid7.com/2014/06/12/you-have-no-sql-inj-sorry-nosql-injections-in-your-application/
+https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/NoSQL%20Injection
+*/

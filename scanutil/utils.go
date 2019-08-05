@@ -16,16 +16,14 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 package scanutil
 
-import (
-
-)
+import ()
 
 // Generic utility functions
 
-/** 
+/**
  * Generator function to return all combinations from a given slice.
- * A Combination is any unique (order doesn't matter) combination of 
- * values. 
+ * A Combination is any unique (order doesn't matter) combination of
+ * values.
  *
  * Example:
  * 		Combinations([1, 2, 3]) -> [1], [2], [3], [1,2], [1,3], [2,3], [1,2,3]
@@ -70,13 +68,13 @@ func combinationsGenerator(c chan []string, set []string) {
 	}
 }
 
-/** 
+/**
  * Generator function to return all permutations from a given slice.
- * A permutation is any unique (order does matter) combination of 
- * values. 
+ * A permutation is any unique (order does matter) combination of
+ * values.
  *
  * Example:
- * 		Combinations([1, 2, 3]) -> 
+ * 		Combinations([1, 2, 3]) ->
  * 			 [A]
  * 			 [A B]
  * 			 [A B C]
@@ -112,13 +110,12 @@ func generatePermutations(c chan []string, permutations []string, universe []str
 	}
 
 	var permutation []string
-	for i, str := range(universe) {
+	for i, str := range universe {
 		permutation = append(permutation, str)
 		c <- permutation
-		newUniverse := append([]string(nil), universe[:i]...)	//ensure we copy the slice, and don't just point to the underlying array
+		newUniverse := append([]string(nil), universe[:i]...) //ensure we copy the slice, and don't just point to the underlying array
 		newUniverse = append(newUniverse, universe[i+1:]...)
-		
+
 		generatePermutations(c, permutation, newUniverse)
 	}
 }
-

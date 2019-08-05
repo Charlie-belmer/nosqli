@@ -21,13 +21,13 @@ import (
 )
 
 type HTTPResponseObject struct {
-    Url string
-    Body string
-    Header map[string][]string
-    StatusCode int
+	Url        string
+	Body       string
+	Header     map[string][]string
+	StatusCode int
 }
 
-/** 
+/**
  * Determine if a given response object is equal to this object.
  *
  * URL is not used in this determination. If two different URL's return the same

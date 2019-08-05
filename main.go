@@ -19,5 +19,5 @@ package main
 import "github.com/Charlie-belmer/nosqli/cmd"
 
 func main() {
-  cmd.Execute()
+	cmd.Execute()
 }

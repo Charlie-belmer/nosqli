@@ -17,47 +17,47 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package cmd
 
 import (
-    "fmt"
-    "github.com/spf13/cobra"
-    "github.com/Charlie-belmer/nosqli/scanners"
-    "github.com/Charlie-belmer/nosqli/scanutil"
-    "log"
+	"fmt"
+	"github.com/Charlie-belmer/nosqli/scanners"
+	"github.com/Charlie-belmer/nosqli/scanutil"
+	"github.com/spf13/cobra"
+	"log"
 )
 
 // scanCmd represents the scan command
 var scanCmd = &cobra.Command{
-    Use:   "scan",
-    Short: "Scan endpoint for NoSQL Injection vectors",
-    Long: `Scan an endpoint for NoSQL Injection vectors. This will return text 
+	Use:   "scan",
+	Short: "Scan endpoint for NoSQL Injection vectors",
+	Long: `Scan an endpoint for NoSQL Injection vectors. This will return text 
 specifying whether an injection was successfully found or not. When passing in 
 values, it is important to try to pass in valid default values to maximize findings.
 For instance, if you wish to check user/password submissions, try to submit a valid username.
 
 Examples:
     nosqli scan -u http://localhost/page?id=5`,
-    Run: func(cmd *cobra.Command, args []string) {
-        var scanOptions = scanutil.ScanOptions{target, request, proxy, userAgent, requestData}
+	Run: func(cmd *cobra.Command, args []string) {
+		var scanOptions = scanutil.ScanOptions{target, request, proxy, userAgent, requestData}
 
-        attackObj, err := scanutil.NewAttackObject(scanOptions)
-        if err != nil {
-            log.Fatal(err)
-        }
+		attackObj, err := scanutil.NewAttackObject(scanOptions)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-        var injectables []scanutil.InjectionObject
-        fmt.Printf("Running Error based scan...\n")
-        injectables = append(injectables, scanners.ErrorBasedInjectionTest(attackObj)...)
-        fmt.Printf("Running Boolean based scan...\n")
-        injectables = append(injectables, scanners.BlindBooleanInjectionTest(attackObj)...)
-        display(injectables)
-    },
+		var injectables []scanutil.InjectionObject
+		fmt.Printf("Running Error based scan...\n")
+		injectables = append(injectables, scanners.ErrorBasedInjectionTest(attackObj)...)
+		fmt.Printf("Running Boolean based scan...\n")
+		injectables = append(injectables, scanners.BlindBooleanInjectionTest(attackObj)...)
+		display(injectables)
+	},
 }
 
 func display(injectables []scanutil.InjectionObject) {
-    for _, in := range injectables {
-        in.Print()
-    }
+	for _, in := range injectables {
+		in.Print()
+	}
 }
 
 func init() {
-    rootCmd.AddCommand(scanCmd)
+	rootCmd.AddCommand(scanCmd)
 }
