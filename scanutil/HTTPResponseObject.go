@@ -37,7 +37,14 @@ type HTTPResponseObject struct {
  */
 func (this *HTTPResponseObject) ContentEquals(cmp HTTPResponseObject) bool {
 	statusEquals := this.StatusCode == cmp.StatusCode
-	headerEquals := reflect.DeepEqual(this.Header, cmp.Header)
 	bodyEquals := this.Body == cmp.Body
-	return statusEquals && headerEquals && bodyEquals
+	return statusEquals && bodyEquals
+}
+
+/**
+ * As Same as ContentEquals, but include headers in consideration
+ */
+func (this *HTTPResponseObject) DeepEquals(cmp HTTPResponseObject) bool {
+	headerEquals := reflect.DeepEqual(this.Header, cmp.Header)
+	return this.ContentEquals(cmp) && headerEquals
 }

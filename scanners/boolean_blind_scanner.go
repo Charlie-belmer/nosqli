@@ -18,7 +18,7 @@ package scanners
 
 import (
 	"github.com/Charlie-belmer/nosqli/scanutil"
-	//"github.com/Charlie-belmer/nosqli/data"
+	"github.com/Charlie-belmer/nosqli/data"
 	//"fmt"
 )
 
@@ -29,12 +29,33 @@ func BlindBooleanInjectionTest(att scanutil.AttackObject) []scanutil.InjectionOb
 	//always false regex: a^
 	//always true regex: .*
 
-	// try running a standard request, a false, and a true, then comparing.
-	// We may at some point need to also do
 	i := iterateRegexGetBooleanInjections(att)
 	i = append(i, iterateRegexPOSTBooleanInjections(att)...)
+	i = append(i, iterateJSGetBooleanInjections(att)...)
 	return i
 }
+
+func isBlindInjectable(baseline, trueRes, falseRes scanutil.HTTPResponseObject) bool {
+	if hasNOSQLError(falseRes.Body) || hasNOSQLError(trueRes.Body) {
+		// Error response, which might indicate injection, but should be caught by error scanner
+		return false
+	}
+	if baseline.ContentEquals(trueRes) && baseline.ContentEquals(falseRes) {
+		// no difference in responses
+		return false
+	}
+	if baseline.ContentEquals(trueRes) && !baseline.ContentEquals(falseRes) {
+		return true
+	}
+	if !baseline.ContentEquals(trueRes) && baseline.ContentEquals(falseRes) {
+		return true
+	}
+	return false
+}
+
+/*****************************************************
+				Mongo REGEX injections
+******************************************************/
 
 /**
  * For each GET param, see if we can do regex attacks against the param.
@@ -56,7 +77,7 @@ func iterateRegexGetBooleanInjections(att scanutil.AttackObject) []scanutil.Inje
 	falseRegex := `a^`
 
 	original_params := att.QueryParams()
-	keys := make([]string, len(original_params))
+	keys := make([]string, 0)
 
 	// Get list of keys
 	for k, _ := range original_params {
@@ -83,10 +104,7 @@ func iterateRegexGetBooleanInjections(att scanutil.AttackObject) []scanutil.Inje
 			att.SetQueryParam(injectedKey, falseRegex)
 			falseRes, _ := att.Send()
 
-			if !(baseline.ContentEquals(trueRes) && baseline.ContentEquals(falseRes)) &&
-				baseline.ContentEquals(trueRes) && !baseline.ContentEquals(falseRes) ||
-				!baseline.ContentEquals(trueRes) && baseline.ContentEquals(falseRes) &&
-					!hasNOSQLError(falseRes.Body) && !hasNOSQLError(trueRes.Body) {
+			if isBlindInjectable(baseline, trueRes, falseRes) {
 				var injectable = scanutil.InjectionObject{
 					Type:            scanutil.Blind,
 					AttackObject:    att,
@@ -144,10 +162,7 @@ func iterateRegexPOSTBooleanInjections(att scanutil.AttackObject) []scanutil.Inj
 			att.ReplaceBodyObject(trueRegex, falseRegex, injectKeys, i)
 			falseRes, _ := att.Send()
 
-			if !(baseline.ContentEquals(trueRes) && baseline.ContentEquals(falseRes)) &&
-				baseline.ContentEquals(trueRes) && !baseline.ContentEquals(falseRes) ||
-				!baseline.ContentEquals(trueRes) && baseline.ContentEquals(falseRes) &&
-					!hasNOSQLError(falseRes.Body) && !hasNOSQLError(trueRes.Body) {
+			if isBlindInjectable(baseline, trueRes, falseRes) {
 				var injectable = scanutil.InjectionObject{
 					Type:            scanutil.Blind,
 					AttackObject:    att,
@@ -162,6 +177,85 @@ func iterateRegexPOSTBooleanInjections(att scanutil.AttackObject) []scanutil.Inj
 
 		//return the request to the original state.
 		att.RestoreBody()
+	}
+	return scanutil.Unique(injectables)
+}
+
+/*****************************************************
+				JavaScript injections
+******************************************************/
+
+/**
+ * For each GET param, see if we can do regex attacks against the param.
+ *
+ * Applications may have multiple paramters that interact, such as
+ * test.com/type=product&id=58
+ *
+ * in this case, leaving id as 58 and trying to inject on type likely won't
+ * show any results. Instead, we need to set ID to true, and then see if
+ * we can inject on type. When we extract data using a blind method,
+ * handling each injectable parameter as linked to the others helps us
+ * derive tables.
+ */
+func iterateJSGetBooleanInjections(att scanutil.AttackObject) []scanutil.InjectionObject {
+	var injectables []scanutil.InjectionObject
+
+	baseline, _ := att.Send()
+
+	original_params := att.QueryParams()
+	keys := make([]string, 0)
+
+	// Get list of keys
+	for k, _ := range original_params {
+		keys = append(keys, k)
+	}
+
+	/**
+	 *	Some apps will have multiple parameters that interact.
+	 *  so we need to ensure that we try every combination of
+	 *  parameters to maximize injection findings.
+	 */
+	for keylist := range scanutil.Combinations(keys) {
+		// Now we have many combos to try - every JS prefix, suffix, and middle for true and false
+		for _, prefix := range(data.JSPrefixes) {
+			for _, suffix := range(data.JSSuffixes) {
+				for _, trueJS := range(data.JSTrueStrings) {
+					trueInjection := prefix + trueJS + suffix
+					//for each combo, we will first set the value of each key to the always true regex
+					for _, key := range keylist {
+						att.SetQueryParam(key, trueInjection)
+					}
+
+					//Then test each key individually for boolean injection.
+					for _, key := range keylist {
+						trueRes, _ := att.Send()
+						for _, falseJS := range(data.JSFalseStrings) {
+							injection := prefix + falseJS + suffix
+							att.SetQueryParam(key, injection)
+							falseRes, _ := att.Send()
+
+							if isBlindInjectable(baseline, trueRes, falseRes) {
+								var injectable = scanutil.InjectionObject{
+									Type:            scanutil.Blind,
+									AttackObject:    att,
+									InjectableParam: key,
+									InjectedParam:   key,
+									InjectedValue:   "true: " + trueInjection + ", false: " + injection,
+								}
+								injectables = append(injectables, injectable)
+							}
+						}
+
+						att.SetQueryParam(key, trueInjection)
+					}
+
+					//return the request to the original state.
+					for _, key := range keylist {
+						att.SetQueryParam(key, original_params[key])
+					}
+				}
+			}
+		}
 	}
 	return scanutil.Unique(injectables)
 }

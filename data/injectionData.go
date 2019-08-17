@@ -33,6 +33,10 @@ var MongoSpecialCharacters = []string{"'", "\"", "$", ".", ">", "[", "]"}
 var MongoSpecialKeyCharacters = []string{"[$]"}
 var MongoJSONErrorAttacks = []string{`{"foo": 1}`}
 var MongoPrefixes = []string{"'", "\""}
+var JSPrefixes = []string{"", "'", "\""}
+var JSSuffixes = []string{"", "'", "\"", `//`, `'"`, `"'`, `'"}//`, `"'}//`}
+var JSTrueStrings = []string{" || 'a'=='a", ` || "a"=="a`, " || 'a'=='a'", ` || "a"=="a"`}
+var JSFalseStrings = []string{" && 'a'!='a", ` && "a"!="a`, " && 'a'!='a'", ` && "a"!="a"`}
 var MongoErrorStrings = []string{
 	`Uncaught MongoDB\\Driver\\Exception\\CommandException: unknown operator`,
 	`(?i)MongoError`,
@@ -43,11 +47,9 @@ var MongooseErrorStrings = []string{
 	`(?i)Cast to string failed for value`, // Seen when object being passed when string expected. May indicate that objects will be parsed as objects.
 }
 
-//TODO: data to insert into GET keys like search[$gt]=h
 
 /* data extraction payload resources:
 https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/NoSQL%20Injection
 https://packetstormsecurity.com/files/107999/Time-Based-Blind-NoSQL-Injection.html
 https://blog.rapid7.com/2014/06/12/you-have-no-sql-inj-sorry-nosql-injections-in-your-application/
-https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/NoSQL%20Injection
 */
