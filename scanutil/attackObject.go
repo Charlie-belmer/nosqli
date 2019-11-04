@@ -107,7 +107,7 @@ func (a *AttackObject) addClient() {
 	if proxy != "" {
 		proxyURL, err := url.Parse(proxy)
 		if err != nil {
-			log.Fatal("Proxy not set correctly: %s", err)
+			log.Fatalf("Proxy not set correctly: %s", err)
 		}
 		fmt.Printf("Using proxy %s\n", proxyURL)
 		transport.Proxy = http.ProxyURL(proxyURL)
@@ -189,6 +189,30 @@ func (a *AttackObject) setBodyQueryParam(pattern string, payload string, replace
 }
 
 /**
+ *  Replace one or more <pattern> with <replacement> string within <source>
+ *  index will replace the <i>th instance. If -1, all patterns are replaced. if
+ *  index > number of pattern instances, nothing will be replaced.
+ */
+func strReplace(source, pattern, replacement string, index int) string {
+	if index == -1 {
+		return strings.ReplaceAll(source, pattern, replacement)
+	} else {
+		var newBody string
+		components := strings.Split(source, pattern)
+		for i, substring := range components {
+			if i == index {
+				newBody = newBody + substring + replacement
+			} else if i == len(components)-1 {
+				newBody = newBody + substring
+			} else {
+				newBody = newBody + substring + pattern
+			}
+		}
+		return newBody
+	}
+}
+
+/**
  * Replace part of the JSON object with a payload
  * The payload should be proper JSON as it will completely replace an existing element -
  * if the payload is a string, it should include double quotes, like `"payload"`, if an
@@ -199,24 +223,7 @@ func (a *AttackObject) setBodyJSONParam(pattern string, payload string, replaceK
 	case "string":
 		// string should be surrounded by double quotes
 		pattern = `"` + pattern + `"`
-		re := regexp.MustCompile(pattern)
-		if index == -1 {
-			a.Body = re.ReplaceAllLiteralString(a.Body, payload)
-		} else {
-			var newBody string
-			components := re.Split(pattern, -1)
-			for i, substring := range components {
-
-				if i == index {
-					newBody = newBody + substring + payload
-				} else if i == len(components)-1 {
-					newBody = newBody + substring
-				} else {
-					newBody = newBody + substring + pattern
-				}
-			}
-			a.Body = newBody
-		}
+		a.Body = strReplace(a.Body, pattern, payload, index)
 	case "number", "boolean", "null":
 		// objects that are not enclosed with quotes should always be values (not keys)
 		// and thus prefixed with a colon or object opener and zero or more spaces
@@ -229,7 +236,10 @@ func (a *AttackObject) setBodyJSONParam(pattern string, payload string, replaceK
 		m2 := []map[string]string{}
 		// If we have multiple matches, they may have differing prefixes and suffixes
 		// so we'll go through and create a new regex and payload to exact match each.
-		for _, submatch := range submatches {
+		for count, submatch := range submatches {
+			if index != -1 && index != count {
+				continue
+			}
 			m = make(map[string]string)
 			for i, n := range submatch {
 				m[names[i]] = n
@@ -246,24 +256,7 @@ func (a *AttackObject) setBodyJSONParam(pattern string, payload string, replaceK
 		}
 
 	default:
-		// array or object should be ok as-is, just use string replace
-		if index >= 0 {
-			//a.Body = strings.Replace(a.Body, pattern, payload, index+1)
-			var newBody string
-			components := strings.Split(a.Body, pattern)
-			for i, substring := range components {
-				if i == index {
-					newBody = newBody + substring + payload
-				} else if i == len(components)-1 {
-					newBody = newBody + substring
-				} else {
-					newBody = newBody + substring + pattern
-				}
-			}
-			a.Body = newBody
-		} else {
-			a.Body = strings.ReplaceAll(a.Body, pattern, payload)
-		}
+		a.Body = strReplace(a.Body, pattern, payload, index)
 	}
 	return nil
 }

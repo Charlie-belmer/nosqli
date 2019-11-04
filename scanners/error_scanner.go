@@ -41,6 +41,11 @@ func hasNOSQLError(body string) bool {
 	return mongoErrors || mongooseErrors
 }
 
+func hasJSError(body string) bool {
+	jsErrors := searchError(body, data.JSSyntaxErrorStrings)
+	return jsErrors
+}
+
 func searchError(body string, errorList []string) bool {
 	for _, pattern := range errorList {
 		matched, err := regexp.MatchString(pattern, body)

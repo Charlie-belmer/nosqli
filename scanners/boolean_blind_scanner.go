@@ -22,13 +22,14 @@ import (
 	//"fmt"
 )
 
+// TODO: Handle case where baseline contains some data, but the 'true' value will be different from baseline
+// for instance when returning a list of matched values, true returns all but a value returns a partial list
+
+
 /**
 Run injection assuming that no errors are being returned.
 **/
 func BlindBooleanInjectionTest(att scanutil.AttackObject) []scanutil.InjectionObject {
-	//always false regex: a^
-	//always true regex: .*
-
 	i := iterateRegexGetBooleanInjections(att)
 	i = append(i, iterateRegexPOSTBooleanInjections(att)...)
 	i = append(i, iterateJSGetBooleanInjections(att)...)
@@ -38,6 +39,11 @@ func BlindBooleanInjectionTest(att scanutil.AttackObject) []scanutil.InjectionOb
 func isBlindInjectable(baseline, trueRes, falseRes scanutil.HTTPResponseObject) bool {
 	if hasNOSQLError(falseRes.Body) || hasNOSQLError(trueRes.Body) {
 		// Error response, which might indicate injection, but should be caught by error scanner
+		return false
+	}
+	if hasJSError(falseRes.Body) || hasJSError(trueRes.Body) {
+		// JS error response - we probably have JS injection, but haven't found a proper boolean 
+		// test string yet.
 		return false
 	}
 	if baseline.ContentEquals(trueRes) && baseline.ContentEquals(falseRes) {
@@ -130,10 +136,6 @@ func iterateRegexGetBooleanInjections(att scanutil.AttackObject) []scanutil.Inje
 /**
 * For each POST param, see if we can do regex attacks against the param.
 * See GET injection tests for more commentary on methodology.
-
-TODO / PROBLEM: the replace just replaces everything - all trues to false and vice versa.
-Instead, it needs to replace just ONE in order... Not sure how to accopmlish this exactly. Possibly
-some combo of re.split with the replaceall
 */
 func iterateRegexPOSTBooleanInjections(att scanutil.AttackObject) []scanutil.InjectionObject {
 	var injectables []scanutil.InjectionObject
@@ -184,6 +186,7 @@ func iterateRegexPOSTBooleanInjections(att scanutil.AttackObject) []scanutil.Inj
 /*****************************************************
 				JavaScript injections
 ******************************************************/
+
 
 /**
  * For each GET param, see if we can do regex attacks against the param.

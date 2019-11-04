@@ -42,6 +42,8 @@ var MongoErrorStrings = []string{
 	`(?i)MongoError`,
 	`(?i)unterminated string literal`,
 }
+// Generic JS errors that don't indicate a specific subsystem, but may indicate JS Injection.
+var JSSyntaxErrorStrings = []string{`SyntaxError`}
 
 var MongooseErrorStrings = []string{
 	`(?i)Cast to string failed for value`, // Seen when object being passed when string expected. May indicate that objects will be parsed as objects.
