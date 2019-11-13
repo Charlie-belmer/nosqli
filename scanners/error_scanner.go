@@ -86,13 +86,13 @@ func iterateBodyInjections(att scanutil.AttackObject, injectionList []string, in
 	var injectables []scanutil.InjectionObject
 	for _, injection := range injectionList {
 		for _, pattern := range att.BodyValues {
-			att.ReplaceBodyObject(pattern, injection, injectKeys, -1)
+			att.ReplaceBodyObject(pattern.Value, injection, injectKeys, pattern.Placement)
 			res, _ := att.Send()
 			if hasNOSQLError(res.Body) {
 				var injectable = scanutil.InjectionObject{
 					Type:            scanutil.Error,
 					AttackObject:    att,
-					InjectableParam: pattern,
+					InjectableParam: pattern.Value,
 					InjectedParam:   injection,
 				}
 				injectables = append(injectables, injectable)

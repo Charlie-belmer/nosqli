@@ -33,10 +33,22 @@ var MongoSpecialCharacters = []string{"'", "\"", "$", ".", ">", "[", "]"}
 var MongoSpecialKeyCharacters = []string{"[$]"}
 var MongoJSONErrorAttacks = []string{`{"foo": 1}`}
 var MongoPrefixes = []string{"'", "\""}
-var JSPrefixes = []string{"", "'", "\""}
-var JSSuffixes = []string{"", "'", "\"", `//`, `'"`, `"'`, `'"}//`, `"'}//`}
-var JSTrueStrings = []string{" || 'a'=='a", ` || "a"=="a`, " || 'a'=='a'", ` || "a"=="a"`}
-var JSFalseStrings = []string{" && 'a'!='a", ` && "a"!="a`, " && 'a'!='a'", ` && "a"!="a"`}
+/*
+* Only use single quotes for JS injections. When creating injections, single quotes may 
+* be sweapped with double quotes for the entire test.
+* True and false injections should always use the same quote type. For instance
+* a true injection using something like && 'a'=='a' shouldn't be compared to
+* false injection using && "a"!="a" because it may result in false positives.
+*/
+var JSPrefixes = []string{"", "'", `"`}
+var JSSuffixes = []string{"", "'", `//`, `'}//`}
+var JSTrueStrings = []string{
+	` && 'a'=='a' && 'a'=='a`,
+	` || 'a'=='a' || 'a'=='a`, 
+}
+var JSFalseStrings = []string{
+	` && 'a'!='a' && 'a'!='a`, 
+}
 var MongoErrorStrings = []string{
 	`Uncaught MongoDB\\Driver\\Exception\\CommandException: unknown operator`,
 	`(?i)MongoError`,

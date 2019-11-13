@@ -16,9 +16,43 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 package scanutil
 
-import ()
+import (
+	"github.com/Charlie-belmer/nosqli/data"
+	"strings"
+)
 
 // Generic utility functions
+type stringer interface{
+	String() string
+}
+
+/**
+ * return a map of true injections, with associated false injections to test.
+ *
+ * params:
+ *   trueInjections true to return list of always true values
+ */
+func JSInjections(quoteType string) map[string][]string {
+	attacks := map[string][]string{}
+	for _, prefix := range(data.JSPrefixes) {
+		for _, suffix := range(data.JSSuffixes) {
+			for _, tInjection := range(data.JSTrueStrings) {
+				tInjection = prefix + tInjection + suffix
+				tInjection = strings.ReplaceAll(tInjection, "'", quoteType)
+				for _, finjection := range(data.JSFalseStrings) {
+					finjection = prefix + finjection + suffix
+					finjection = strings.ReplaceAll(finjection, "'", quoteType)
+					if _, ok := attacks[tInjection]; ok {
+						attacks[tInjection] = append(attacks[tInjection], finjection)
+					} else {
+						attacks[tInjection] = []string{finjection}
+					}
+				}
+			}
+		}
+	}
+	return attacks
+}
 
 /**
  * Generator function to return all combinations from a given slice.
@@ -28,10 +62,54 @@ import ()
  * Example:
  * 		Combinations([1, 2, 3]) -> [1], [2], [3], [1,2], [1,3], [2,3], [1,2,3]
  */
-func Combinations(data []string) <-chan []string {
-	c := make(chan []string)
 
+// Combinations for a slice of strings - convert to []interface{} and pass to Combinations
+func StringCombinations(data []string) <-chan []string {
+	c := make(chan []string)
+	iData := make([]interface{}, len(data))
+	for i, v := range data {
+	    iData[i] = v
+	}
 	go func(c chan []string) {
+		defer close(c)
+
+		for combo := range Combinations(iData...) {
+			sData := make([]string, len(combo))
+			for i, v := range combo {
+			    sData[i] = v.(string)
+			}
+			c <- sData
+		}
+	}(c)
+
+	return c
+}
+
+func BodyItemCombinations(data []BodyItem) <-chan []BodyItem {
+	c := make(chan []BodyItem)
+	iData := make([]interface{}, len(data))
+	for i, v := range data {
+	    iData[i] = v
+	}
+	go func(c chan []BodyItem) {
+		defer close(c)
+
+		for combo := range Combinations(iData...) {
+			sData := make([]BodyItem, len(combo))
+			for i, v := range combo {
+			    sData[i] = v.(BodyItem)
+			}
+			c <- sData
+		}
+	}(c)
+
+	return c
+}
+
+// Generic combinations
+func Combinations(data ...interface{}) <-chan []interface{} {
+	c := make(chan []interface{})
+	go func(c chan []interface{}) {
 		defer close(c)
 
 		combinationsGenerator(c, data)
@@ -46,13 +124,13 @@ func Combinations(data []string) <-chan []string {
  * returning the whole set at once.
  * https://github.com/mxschmitt/golang-combinations/blob/master/combinations.go
  */
-func combinationsGenerator(c chan []string, set []string) {
+func combinationsGenerator(c chan []interface{}, set []interface{}) {
 	length := uint(len(set))
 
 	// Go through all possible combinations of objects
-	// from 1 (only first object in subset) to 2^length (all objects in subset)
+	// from 0 (empty object in subset) to 2^length (all objects in subset)
 	for subsetBits := 1; subsetBits < (1 << length); subsetBits++ {
-		var subset []string
+		var subset []interface{}
 
 		for object := uint(0); object < length; object++ {
 			// checks if object is contained in subset
@@ -62,8 +140,6 @@ func combinationsGenerator(c chan []string, set []string) {
 				subset = append(subset, set[object])
 			}
 		}
-		// add subset to subsets
-		//subsets = append(subsets, subset)
 		c <- subset
 	}
 }

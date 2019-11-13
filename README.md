@@ -69,6 +69,18 @@ $ go install
 $ nosqli -h
 ```
 
+## Running Tests
+There is a decent test suite included. Unit tests along with simple injection coverage can be run by using go test from the root directory:
+```bash
+go test ./...
+```
+
+Integration tests are also available which run injections against known vulnerable apps running locally. To use integration tests, install and run the [vulnerable nodejs Mongo injection app](https://github.com/Charlie-belmer/vulnerable-node-app) and my [vulnerable PHP lab fork](https://github.com/Charlie-belmer/nosqlilab) from [digininja](https://digi.ninja/projects/nosqli_lab.php). Then pass in the integrations flag:
+```bash
+go test ./... -args -integrations=true
+```
+If either environment is not found, integration tests will be disabled by one of the test cases, to speed the test run.
+
 ## Contributing
 Contributions are welcome! Please submit a pull request, limiting changes to one logical change per pull request. 
 

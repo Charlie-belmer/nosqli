@@ -31,6 +31,12 @@ import (
 	"time"
 )
 
+// An object to keep track of where values  are located within a request body
+type BodyItem struct {
+	Value 		string 	// The specific item in the body
+	Placement	int 	// where it falls in the body
+}
+
 /**
  *  An object to manage attack payloads and structures.
  */
@@ -40,7 +46,7 @@ type AttackObject struct {
 	Options      ScanOptions
 	Body         string
 	originalBody string   // Keep the original body, so we can reset it after injecting attack strings.
-	BodyValues   []string // List of all values that can be updated. May include maps or arrays (if body is JSON) - but as Strings
+	BodyValues   []BodyItem // List of all values that can be updated. May include maps or arrays (if body is JSON) - but as Strings
 }
 
 func NewAttackObject(options ScanOptions) (AttackObject, error) {
@@ -139,6 +145,13 @@ func (a *AttackObject) QueryParams() map[string]string {
 		m[k] = v[0]
 	}
 	return m
+}
+
+/**
+ *	Return string of the request Query
+ */ 
+func (a *AttackObject) QueryString() string {
+	return a.Request.URL.RawQuery
 }
 
 /**
@@ -342,10 +355,22 @@ func (a *AttackObject) RestoreBody() {
  * and save them into the attack object.
  */
 func (a *AttackObject) extractUpdateableValuesFromBody() {
+	var values []string
+	valueCounter := map[string]int{}
+
 	if isJSON(a.Body) {
-		a.BodyValues = FlattenJSON(a.Body)
+		values = FlattenJSON(a.Body)
 	} else {
-		a.BodyValues = extractUpdateableQueryValuesFromBody(a.Body)
+		values = extractUpdateableQueryValuesFromBody(a.Body)
+	}
+
+	for _, v := range values {
+		if _, ok := valueCounter[v]; ok {
+			valueCounter[v]++
+		} else {
+			valueCounter[v] = 0
+		}
+		a.BodyValues = append(a.BodyValues, BodyItem{v, valueCounter[v]})
 	}
 }
 

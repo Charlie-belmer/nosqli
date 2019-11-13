@@ -9,9 +9,9 @@ import (
 	"testing"
 )
 
-/**
- * Setup a new default attack object.
-*/
+/***********
+ * Setup objects and mocks
+***********/
 func setup(t *testing.T, body string) scanutil.AttackObject {
 	testurl := "http://www.test.com/"
 	var scanOptions = scanutil.ScanOptions{Target: testurl}
@@ -25,6 +25,9 @@ func setup(t *testing.T, body string) scanutil.AttackObject {
 	return att
 }
 
+/***********
+ * Tests
+***********/
 
 func TestSetQueryParam(t *testing.T) {
 	testurl := "http://www.test.com/page?key1=value1&key2=value2&key3=value3"
@@ -66,28 +69,40 @@ func TestSetQueryParam(t *testing.T) {
 func TestSetBodyQueryValues(t *testing.T) {
 	att := setup(t, "key1=value1&key2=value2&key3=value3")
 
-	expect := []string{"key1", "value1", "key2", "value2", "key3", "value3"}
+	expect := []scanutil.BodyItem{{"key1",0}, {"value1",0}, {"key2",0}, {"value2",0}, {"key3",0}, {"value3",0}}
 	//Values may not be in the same order, so let's sort both.
-	sort.SliceStable(expect, func(i, j int) bool { return expect[i] < expect[j] })
+	sort.SliceStable(expect, func(i, j int) bool { return expect[i].Value < expect[j].Value })
 	values := att.BodyValues
-	sort.SliceStable(values, func(i, j int) bool { return values[i] < values[j] })
+	sort.SliceStable(values, func(i, j int) bool { return values[i].Value < values[j].Value })
 	eq := reflect.DeepEqual(expect, values)
 	if !eq {
-		t.Errorf("Body values not extracted correctly for form data\nExpected: %s\nActual:   %s\n", expect, values)
+		t.Errorf("Body values not extracted correctly for form data\nExpected: %v\nActual:   %v\n", expect, values)
 	}
 }
 
 /**
- *	Make sure that when creating an object with a body that uses form values,
+ *	Make sure that when creating an object with a body that uses JSON values,
  * that the form key and value data are correclty extracted.
  */
 func TestSetBodyJSON(t *testing.T) {
 	att := setup(t, `{"key1": {"subkey": "value","subkey2": ["one", "two", "three"]}, "key2": "something else"}`)
 	
-	expect := []string{`key1`, `{"subkey": "value","subkey2": ["one", "two", "three"]}`, `subkey`, `value`, `subkey2`, `["one", "two", "three"]`, `one`, `two`, `three`, `key2`, `something else`}
+	expect := []scanutil.BodyItem{
+		{`key1`,0}, 
+		{`{"subkey": "value","subkey2": ["one", "two", "three"]}`,0},
+		{`subkey`,0}, 
+		{`value`,0}, 
+		{`subkey2`,0}, 
+		{`["one", "two", "three"]`,0}, 
+		{`one`,0}, 
+		{`two`,0}, 
+		{`three`,0}, 
+		{`key2`,0}, 
+		{`something else`,0},
+	}
 	eq := reflect.DeepEqual(expect, att.BodyValues)
 	if !eq {
-		t.Errorf("Body values not extracted correctly for form data.\nExpected: %s\nActual:   %s\n", expect, att.BodyValues)
+		t.Errorf("Body values not extracted correctly for form data.\nExpected: %v\nActual:   %v\n", expect, att.BodyValues)
 	}
 }
 

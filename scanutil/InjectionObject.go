@@ -19,6 +19,7 @@ package scanutil
 import (
 	"crypto/md5"
 	"fmt"
+	"bytes"
 )
 
 type InjectionType int
@@ -59,11 +60,15 @@ type InjectionObject struct {
 }
 
 func (i *InjectionObject) Print() {
-	fmt.Printf("Found %s:\n", i.Type)
-	fmt.Printf("  URL: %s\n", i.AttackObject.Request.URL)
-	fmt.Printf("  param: %s\n", i.InjectableParam)
-	fmt.Printf("  Injection: %s=%s\n\n", i.InjectedParam, i.InjectedValue)
+	fmt.Print(i.String())
 }
+
+func (i *InjectionObject) String() string {
+	var b bytes.Buffer
+	fmt.Fprintf(&b, "Found %s:\n\tURL: %s\n\tparam: %s\n\tInjection: %s=%s\n\n", i.Type, i.AttackObject.Request.URL, i.InjectableParam, i.InjectedParam, i.InjectedValue)
+	return b.String()
+}
+
 
 /**
  * Return a hash of this object

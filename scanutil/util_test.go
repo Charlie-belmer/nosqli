@@ -6,7 +6,12 @@ import (
 	"sort"
 	"testing"
 	"math"
+	"flag"
+	//"fmt"
 )
+
+//Unused in util package currently
+var runIntegrations = flag.Bool("integrations", false, "True if we should run integrations tests dependant upon test sites running")
 
 
 /**
@@ -42,24 +47,66 @@ func sortEmbedded(s [][]string) {
 /**
  *	Determine all combinations are successfully generated.
  */
+ var combinationTests = []struct {
+ 	name string
+	input []scanutil.BodyItem
+	output  [][]scanutil.BodyItem
+}{
+	{	"Two Element scanutil.BodyItem",
+		[]scanutil.BodyItem{scanutil.BodyItem{"Some Item", 0}, scanutil.BodyItem{"Another item", 0}}, 
+		[][]scanutil.BodyItem{
+			{scanutil.BodyItem{"Some Item", 0}}, {scanutil.BodyItem{"Another item", 0}}, {scanutil.BodyItem{"Some Item", 0}, scanutil.BodyItem{"Another item", 0}},
+		},
+	},
+}
 func TestCombinations(t *testing.T) {
-	data := []string{"A", "B", "C", "D"}
-	expect := [][]string{
-		{"A"}, {"B"}, {"C"}, {"D"},
-		{"A", "B"}, {"A", "C"}, {"A", "D"}, {"B", "C"}, {"C", "D"}, {"B", "D"},
-		{"A", "B", "C"}, {"A", "C", "D"}, {"B", "C", "D"}, {"A", "B", "D"},
-		{"A", "B", "C", "D"},
-	}
-	var result [][]string
-	for item := range scanutil.Combinations(data) {
-		result = append(result, item)
-	}
+	for _, test := range combinationTests {
+		t.Run(test.name, func(t *testing.T) {
+			var result [][]scanutil.BodyItem
+			for item := range scanutil.BodyItemCombinations(test.input) {
+				result = append(result, item)
+			}
 
-	sortEmbedded(result)
-	sortEmbedded(expect)
-	eq := reflect.DeepEqual(result, expect)
-	if !eq {
-		t.Errorf("Combinations function did not return the expected combinations.\nExpected: %s\nActual:   %s\n", expect, result)
+			//sortEmbedded(result)
+			//sortEmbedded(test.output)
+			eq := reflect.DeepEqual(result, test.output)
+			if !eq {
+				t.Errorf("Combinations function did not return the expected combinations.\nExpected: %+v\nActual:   %+v\n", test.output, result)
+			}
+		})
 	}
-	
+}
+
+ var stringCombinationTests = []struct {
+ 	name string
+	input []string
+	output  [][]string
+}{
+	{	"Four Element slice",
+		[]string{"A", "B", "C", "D"}, 
+		[][]string{
+			{"A"}, {"B"}, {"C"}, {"D"},
+			{"A", "B"}, {"A", "C"}, {"A", "D"}, {"B", "C"}, {"C", "D"}, {"B", "D"},
+			{"A", "B", "C"}, {"A", "C", "D"}, {"B", "C", "D"}, {"A", "B", "D"},
+			{"A", "B", "C", "D"},
+		},
+	},
+	{ "Single Element", []string{"A"}, [][]string{{"A"}},},
+}
+func TestStringCombinations(t *testing.T) {
+	for _, test := range stringCombinationTests {
+		t.Run(test.name, func(t *testing.T) {
+			var result [][]string
+			for item := range scanutil.StringCombinations(test.input) {
+				result = append(result, item)
+			}
+
+			sortEmbedded(result)
+			sortEmbedded(test.output)
+			eq := reflect.DeepEqual(result, test.output)
+			if !eq {
+				t.Errorf("Combinations function did not return the expected combinations.\nExpected: %+v\nActual:   %+v\n", test.output, result)
+			}
+		})
+	}
 }
