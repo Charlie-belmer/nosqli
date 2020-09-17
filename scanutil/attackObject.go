@@ -19,6 +19,7 @@ package scanutil
 import (
 	"bufio"
 	"bytes"
+	"crypto/md5"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -33,8 +34,8 @@ import (
 
 // An object to keep track of where values  are located within a request body
 type BodyItem struct {
-	Value 		string 	// The specific item in the body
-	Placement	int 	// where it falls in the body
+	Value     string // The specific item in the body
+	Placement int    // where it falls in the body
 }
 
 /**
@@ -45,7 +46,7 @@ type AttackObject struct {
 	Client       *http.Client
 	Options      ScanOptions
 	Body         string
-	originalBody string   // Keep the original body, so we can reset it after injecting attack strings.
+	originalBody string     // Keep the original body, so we can reset it after injecting attack strings.
 	BodyValues   []BodyItem // List of all values that can be updated. May include maps or arrays (if body is JSON) - but as Strings
 }
 
@@ -125,6 +126,29 @@ func (a *AttackObject) addClient() {
 }
 
 /**
+ * Return a unique hash of this object
+ */
+func (a *AttackObject) Hash() string {
+	serial := a.Body + a.Request.URL.String()
+	md5 := md5.Sum([]byte(serial))
+	return string(md5[:])
+}
+
+/**
+ * Make a deep copy of this object
+ */
+func (a *AttackObject) Copy() AttackObject {
+	attackObj, _ := NewAttackObject(a.Options)
+	attackObj.Body = a.Body
+	copy(attackObj.BodyValues, a.BodyValues)
+	attackObj.originalBody = a.originalBody
+	attackObj.Request.URL.RawQuery = a.Request.URL.RawQuery
+	attackObj.Request.Method = a.Request.Method
+	attackObj.Request.Header.Set("Content-Type", a.Request.Header.Get("Content-Type"))
+	return attackObj
+}
+
+/**
  * Parse a URL into an attack object
  */
 func (a *AttackObject) SetURL(u string) {
@@ -149,7 +173,7 @@ func (a *AttackObject) QueryParams() map[string]string {
 
 /**
  *	Return string of the request Query
- */ 
+ */
 func (a *AttackObject) QueryString() string {
 	return a.Request.URL.RawQuery
 }
@@ -294,6 +318,7 @@ func (a *AttackObject) ReplaceBodyObject(pattern string, payload string, replace
 	if a.bodyIsJSON() {
 		a.setBodyJSONParam(pattern, payload, replaceKey, index)
 	} else {
+		a.urlDecodeBody()
 		a.setBodyQueryParam(pattern, payload, replaceKey)
 	}
 	a.Request.ContentLength = int64(len(a.Body))
@@ -301,7 +326,13 @@ func (a *AttackObject) ReplaceBodyObject(pattern string, payload string, replace
 
 func (a *AttackObject) bodyIsJSON() bool {
 	contentType := a.Request.Header.Get("Content-Type")
-	return contentType == "application/json"
+	if contentType == "application/json" {
+		return true
+	}
+	if isJSON(a.Body) {
+		return true
+	}
+	return false
 }
 
 /**
@@ -330,7 +361,7 @@ func (a *AttackObject) SetBody(body string) {
 }
 
 /**
- * URL encode a body to it matches application/x-www-form-urlencoded
+ * URL encode a body so it matches application/x-www-form-urlencoded
  * content type.
  */
 func (a *AttackObject) urlEncodeBody() {
@@ -340,6 +371,19 @@ func (a *AttackObject) urlEncodeBody() {
 	}
 	q := u.Query()
 	a.Body = q.Encode()
+}
+
+/**
+ * URL Decode the body, reversing encoding. Useful for when we want to replace objects and not worry about
+ * encodings
+ */
+func (a *AttackObject) urlDecodeBody() {
+	decoded, err := url.QueryUnescape(a.Body)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	a.Body = decoded
 }
 
 /**
@@ -398,10 +442,17 @@ func (a *AttackObject) setRequestBody() {
 	a.Request.Body = ioutil.NopCloser(strings.NewReader(a.Body))
 }
 
+// Cache for requests - we shouldn't send the same request twice
+var requestCache map[string]HTTPResponseObject = map[string]HTTPResponseObject{}
+
 /**
  * Send the request to the object target
  */
 func (a *AttackObject) Send() (HTTPResponseObject, error) {
+	if res, ok := requestCache[a.Hash()]; ok {
+		return res, nil
+	}
+
 	a.setRequestBody()
 	url := a.Request.URL.String()
 	obj := HTTPResponseObject{url, "", nil, 0}
@@ -425,6 +476,7 @@ func (a *AttackObject) Send() (HTTPResponseObject, error) {
 	}
 
 	obj.Body = string(body)
+	requestCache[a.Hash()] = obj
 
 	return obj, nil
 }

@@ -80,7 +80,7 @@ func TestBooleanInjectionGetRequests(t *testing.T) {
 			injectables := scanners.BlindBooleanInjectionTest(att)
 
 			if len(injectables) != test.expectedNumFindings {
-				t.Errorf("Mismatch in findings length\nGot: %+v findings. Expected: %+v\nGot: %#v\n Expected: %+v\n", len(injectables), test.expectedNumFindings, injectables, test.expectedInjectionValues)
+				t.Errorf("Mismatch in findings length\nObject: %+v\n\nGot: %+v findings. Expected: %+v\nGot: %#v\n Expected: %+v\n", att, len(injectables), test.expectedNumFindings, injectables, test.expectedInjectionValues)
 			}
 			for i, injectable := range(injectables) {
 				if i >= len(test.expectedInjectionValues) {

@@ -305,3 +305,20 @@ func TestReplaceBodyQueryString(t *testing.T) {
 		t.Errorf("Integer value not replaced correctly.\nExpected: %s\nActual:   %s\n", expect, att.Body)
 	}
 }
+
+func TestCopy(t *testing.T) {
+	att := setup(t, `{"key": "some body data"}`)
+	att2 := att.Copy()
+	att2.ReplaceBodyObject("key", "something new", false, -1)
+	if att.Hash() == att2.Hash() {
+		t.Errorf("Copies are synchronized. Expected to be different\n Object1: %+v\nObject2: %+v", att, att2)
+	}
+	testurl := "http://www.test.com/page?key1=value1&key2=value2&key3=value3"
+	var scanOptions = scanutil.ScanOptions{Target: testurl}
+	att, _ = scanutil.NewAttackObject(scanOptions)
+	att2 = att.Copy()
+	att2.SetQueryParam("key1", "replaced")
+	if att.Hash() == att2.Hash() {
+		t.Errorf("Requests are synchronized. Expected to be different\n Object1: %+v\nObject2: %+v\nRequest1: %+v\nRequest2: %+v\n", att, att2, att.Request, att2.Request)
+	}
+}

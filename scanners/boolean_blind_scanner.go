@@ -17,12 +17,13 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package scanners
 
 import (
-	"github.com/Charlie-belmer/nosqli/scanutil"
 	"fmt"
+
+	"github.com/Charlie-belmer/nosqli/scanutil"
 )
 
 /**
-Run injection assuming that no errors are being returned.
+Run injection assuming that no errors are being returned, but the page may differ in detectable ways.
 **/
 func BlindBooleanInjectionTest(att scanutil.AttackObject) []scanutil.InjectionObject {
 	i := iterateRegexGetBooleanInjections(att)
@@ -38,7 +39,7 @@ func isBlindInjectable(baseline, trueRes, falseRes scanutil.HTTPResponseObject) 
 		return false
 	}
 	if hasJSError(falseRes.Body) || hasJSError(trueRes.Body) {
-		// JS error response - we probably have JS injection, but haven't found a proper boolean 
+		// JS error response - we probably have JS injection, but haven't found a proper boolean
 		// test string yet.
 		return false
 	}
@@ -53,6 +54,34 @@ func isBlindInjectable(baseline, trueRes, falseRes scanutil.HTTPResponseObject) 
 		return true
 	}
 	return false
+}
+
+// Run and compare the three requests to test for an injection
+func runInjection(baseline, trueObject, falseObject scanutil.AttackObject, key, injectedKey, trueVal, falseVal string) (scanutil.InjectionObject, bool) {
+	baselineRes, err := baseline.Send()
+	if err != nil {
+		fmt.Println(err)
+	}
+	trueRes, err := trueObject.Send()
+	if err != nil {
+		fmt.Println(err)
+	}
+	falseRes, err := falseObject.Send()
+	if err != nil {
+		fmt.Println(err)
+	}
+	injectable := scanutil.InjectionObject{}
+	if isBlindInjectable(baselineRes, trueRes, falseRes) {
+		injectable = scanutil.InjectionObject{
+			Type:            scanutil.Blind,
+			AttackObject:    baseline,
+			InjectableParam: key,
+			InjectedParam:   injectedKey,
+			InjectedValue:   "true: " + trueVal + ", false: " + falseVal,
+		}
+		return injectable, true
+	}
+	return injectable, false
 }
 
 /*****************************************************
@@ -85,15 +114,16 @@ func iterateRegexGetBooleanInjections(att scanutil.AttackObject) []scanutil.Inje
 		keys = append(keys, k)
 	}
 
-	baseline, _ := att.Send()
-	// Set all to empty keys, and see if we can still get a baseline - this will allow us to get 
-	// a full injection, unlike something like user=john.*, which might give a baseline of a single 
+	baseline := att.Copy()
+	baseline2 := att.Copy()
+	// Set all to empty keys, and see if we can still get a baseline - this will allow us to get
+	// a full injection, unlike something like user=john.*, which might give a baseline of a single
 	// record, we would prefer user=.*, though in some cases, we might still need to keep the prefix
 	for _, key := range keys {
-		att.SetQueryParam(key, "")
+		baseline2.SetQueryParam(key, "")
 	}
-	baseline2, err := att.Send()
-	if err == nil && !hasJSError(baseline2.Body) && !hasNOSQLError(baseline2.Body) {
+	baselineRes2, err := baseline2.Send()
+	if err == nil && !hasJSError(baselineRes2.Body) && !hasNOSQLError(baselineRes2.Body) {
 		baseline = baseline2
 	}
 
@@ -104,35 +134,22 @@ func iterateRegexGetBooleanInjections(att scanutil.AttackObject) []scanutil.Inje
 	 */
 	for keylist := range scanutil.StringCombinations(keys) {
 		//for each combo, we will first set the value of each key to the always true regex
+		trueObj := baseline.Copy()
 		for _, key := range keylist {
 			injectedKey := key + `[$regex]`
-			att.ReplaceQueryParam(key, injectedKey, trueRegex)
+			trueObj.ReplaceQueryParam(key, injectedKey, trueRegex)
 		}
-		trueRes, _ := att.Send()
+
 		//Then test each key individually for boolean injection.
 		for _, key := range keylist {
 			injectedKey := key + `[$regex]`
-			att.SetQueryParam(injectedKey, falseRegex)
-			falseRes, _ := att.Send()
+			falseObj := trueObj.Copy()
+			falseObj.SetQueryParam(injectedKey, falseRegex)
 
-			if isBlindInjectable(baseline, trueRes, falseRes) {
-				var injectable = scanutil.InjectionObject{
-					Type:            scanutil.Blind,
-					AttackObject:    att,
-					InjectableParam: key,
-					InjectedParam:   injectedKey,
-					InjectedValue:   "true: " + trueRegex + ", false: " + falseRegex,
-				}
+			injectable, injectionSuccess := runInjection(baseline, trueObj, falseObj, key, injectedKey, trueRegex, falseRegex)
+			if injectionSuccess {
 				injectables = append(injectables, injectable)
 			}
-
-			att.SetQueryParam(injectedKey, trueRegex)
-		}
-
-		//return the request to the original state.
-		for _, key := range keylist {
-			injectedKey := key + `[$regex]`
-			att.ReplaceQueryParam(injectedKey, key, original_params[key])
 		}
 	}
 	return scanutil.Unique(injectables)
@@ -141,11 +158,11 @@ func iterateRegexGetBooleanInjections(att scanutil.AttackObject) []scanutil.Inje
 /**
 * For each POST param, see if we can do regex attacks against the param.
 * See GET injection tests for more commentary on methodology.
-*/
+ */
 func iterateRegexPOSTBooleanInjections(att scanutil.AttackObject) []scanutil.InjectionObject {
 	var injectables []scanutil.InjectionObject
 
-	baseline, _ := att.Send()
+	baseline := att
 	trueRegex := `{"$regex": ".*"}`
 	falseRegex := `{"$regex": "a^"}`
 	injectKeys := true
@@ -156,34 +173,23 @@ func iterateRegexPOSTBooleanInjections(att scanutil.AttackObject) []scanutil.Inj
 	 *  parameters to maximize injection findings.
 	 */
 	for keylist := range scanutil.BodyItemCombinations(att.BodyValues) {
+		trueObj := baseline.Copy()
 
 		//for each combo, we will first set the value of each key to the always true regex
 		for _, pattern := range keylist {
-			att.ReplaceBodyObject(pattern.Value, trueRegex, injectKeys, pattern.Placement)
+			trueObj.ReplaceBodyObject(pattern.Value, trueRegex, injectKeys, pattern.Placement)
 		}
-		trueRes, _ := att.Send()
-
+		falseObj := trueObj.Copy()
 		//Then test each key individually for boolean injection.
 		for i, pattern := range keylist {
+			falseObj.ReplaceBodyObject(trueRegex, falseRegex, injectKeys, i)
 
-			att.ReplaceBodyObject(trueRegex, falseRegex, injectKeys, i)
-			falseRes, _ := att.Send()
-
-			if isBlindInjectable(baseline, trueRes, falseRes) {
-				var injectable = scanutil.InjectionObject{
-					Type:            scanutil.Blind,
-					AttackObject:    att,
-					InjectableParam: pattern.Value,
-					InjectedParam:   "true: " + trueRegex + ", false: " + falseRegex,
-				}
+			injectable, injectionSuccess := runInjection(baseline, trueObj, falseObj, pattern.Value, pattern.Value, trueRegex, falseRegex)
+			if injectionSuccess {
 				injectables = append(injectables, injectable)
 			}
-
-			att.ReplaceBodyObject(falseRegex, trueRegex, injectKeys, -1)
+			falseObj.ReplaceBodyObject(falseRegex, trueRegex, injectKeys, -1)
 		}
-
-		//return the request to the original state.
-		att.RestoreBody()
 	}
 	return scanutil.Unique(injectables)
 }
@@ -191,7 +197,6 @@ func iterateRegexPOSTBooleanInjections(att scanutil.AttackObject) []scanutil.Inj
 /*****************************************************
 				JavaScript injections
 ******************************************************/
-
 
 /**
  * For each GET param, see if we can do regex attacks against the param.
@@ -208,8 +213,6 @@ func iterateRegexPOSTBooleanInjections(att scanutil.AttackObject) []scanutil.Inj
 func iterateJSGetBooleanInjections(att scanutil.AttackObject) []scanutil.InjectionObject {
 	var injectables []scanutil.InjectionObject
 
-	baseline, _ := att.Send()
-
 	original_params := att.QueryParams()
 	keys := make([]string, 0)
 
@@ -223,53 +226,29 @@ func iterateJSGetBooleanInjections(att scanutil.AttackObject) []scanutil.Injecti
 	 *  so we need to ensure that we try every combination of
 	 *  parameters to maximize injection findings.
 	 */
-	requestCache := map[string]scanutil.HTTPResponseObject{}
-	for _, quoteType := range([]string{"'","\""}) {
+	for _, quoteType := range []string{"'", "\""} {
 		// try with both single quoted and double quoted strings
 		injections := scanutil.JSInjections(quoteType)
 		for keylist := range scanutil.StringCombinations(keys) {
-			for trueJS, falseInjections := range(injections) {
+			for trueJS, falseInjections := range injections {
 				// Assign all keys in this combination to True
+				trueObj := att.Copy()
 				for _, key := range keylist {
-					att.SetQueryParam(key, original_params[key] + trueJS)
+					trueObj.SetQueryParam(key, original_params[key]+trueJS)
 				}
-				trueRes, _ := att.Send()
 
+				falseObj := trueObj.Copy()
 				for _, key := range keylist {
-					for _, falseJS := range(falseInjections) {
+					for _, falseJS := range falseInjections {
 						injection := original_params[key] + falseJS
-						att.SetQueryParam(key, injection)
-						var falseRes scanutil.HTTPResponseObject
-						if res, ok := requestCache[att.QueryString()]; !ok{
-							var err error
-							falseRes, err = att.Send()
-							if err != nil {
-								fmt.Println(err)
-							}
-							requestCache[att.QueryString()] = falseRes
-						} else {
-							falseRes = res
-						}
-
-						if isBlindInjectable(baseline, trueRes, falseRes) {
-							
-							var injectable = scanutil.InjectionObject{
-								Type:            scanutil.Blind,
-								AttackObject:    att,
-								InjectableParam: key,
-								InjectedParam:   key,
-								InjectedValue:   "true: " + original_params[key] + trueJS + ", false: " + injection,
-							}
+						falseObj.SetQueryParam(key, injection)
+						injectable, injectionSuccess := runInjection(att, trueObj, falseObj, key, key, original_params[key]+trueJS, injection)
+						if injectionSuccess {
 							injectables = append(injectables, injectable)
 						}
+						falseObj.SetQueryParam(key, original_params[key])
 					}
 
-					att.SetQueryParam(key, original_params[key] + trueJS)
-				}
-
-				//return the request to the original state.
-				for _, key := range keylist {
-					att.SetQueryParam(key, original_params[key])
 				}
 			}
 		}
@@ -277,68 +256,39 @@ func iterateJSGetBooleanInjections(att scanutil.AttackObject) []scanutil.Injecti
 	return scanutil.Unique(injectables)
 }
 
-
 func iterateJSPostBooleanInjections(att scanutil.AttackObject) []scanutil.InjectionObject {
 	var injectables []scanutil.InjectionObject
-
-	baseline, _ := att.Send()
 
 	/**
 	 *	Some apps will have multiple parameters that interact.
 	 *  so we need to ensure that we try every combination of
 	 *  parameters to maximize injection findings.
 	 */
-	requestCache := map[string]scanutil.HTTPResponseObject{}
-	for _, quoteType := range([]string{"'","\""}) {
+	for _, quoteType := range []string{"'", "\""} {
 		// try with both single quoted and double quoted strings
 		injections := scanutil.JSInjections(quoteType)
 		for keylist := range scanutil.BodyItemCombinations(att.BodyValues) {
-			for trueJS, falseInjections := range(injections) {
+			for trueJS, falseInjections := range injections {
 				// Assign all keys in this combination to True
+				trueObj := att.Copy()
 				for _, key := range keylist {
 					injection := `"` + key.Value + trueJS + `"`
-					att.ReplaceBodyObject(key.Value, injection, false, key.Placement)
+					trueObj.ReplaceBodyObject(key.Value, injection, false, key.Placement)
 				}
-				trueRes, _ := att.Send()
-
+				falseObj := trueObj.Copy()
 				for i, key := range keylist {
-					for _, falseJS := range(falseInjections) {
+					for _, falseJS := range falseInjections {
 						injection := `"` + key.Value + falseJS + `"`
-						att.ReplaceBodyObject(key.Value + trueJS, injection, false, i)
-						var falseRes scanutil.HTTPResponseObject
-						if res, ok := requestCache[att.Body]; !ok{
-							var err error
-							falseRes, err = att.Send()
-							if err != nil {
-								fmt.Println(err)
-							}
-							requestCache[att.Body] = falseRes
-						} else {
-							falseRes = res
-						}
-
-						if isBlindInjectable(baseline, trueRes, falseRes) {
-							
-							var injectable = scanutil.InjectionObject{
-								Type:            scanutil.Blind,
-								AttackObject:    att,
-								InjectableParam: key.Value,
-								InjectedParam:   key.Value,
-								InjectedValue:   "true: " + key.Value + trueJS + ", false: " + injection,
-							}
+						falseObj.ReplaceBodyObject(key.Value+trueJS, injection, false, i)
+						injectable, injectionSuccess := runInjection(att, trueObj, falseObj, key.Value, key.Value, key.Value+trueJS, injection)
+						if injectionSuccess {
 							injectables = append(injectables, injectable)
 						}
-						att.ReplaceBodyObject(injection, trueJS, false, -1)
+						falseObj.ReplaceBodyObject(injection, trueJS, false, -1)
 					}
-
-					
 				}
-
-				//return the request to the original state.
-				att.RestoreBody()
 			}
 		}
 	}
-		return scanutil.Unique(injectables)
+	return scanutil.Unique(injectables)
 }
-
