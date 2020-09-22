@@ -18,7 +18,7 @@ package scanners
 
 import (
 	"fmt"
-
+	"github.com/Charlie-belmer/nosqli/data"
 	"github.com/Charlie-belmer/nosqli/scanutil"
 )
 
@@ -30,6 +30,7 @@ func BlindBooleanInjectionTest(att scanutil.AttackObject) []scanutil.InjectionOb
 	i = append(i, iterateRegexPOSTBooleanInjections(att)...)
 	i = append(i, iterateJSGetBooleanInjections(att)...)
 	i = append(i, iterateJSPostBooleanInjections(att)...)
+	i = append(i, iterateObjectInjections(att)...)
 	return i
 }
 
@@ -62,10 +63,12 @@ func runInjection(baseline, trueObject, falseObject scanutil.AttackObject, key, 
 	if err != nil {
 		fmt.Println(err)
 	}
+
 	trueRes, err := trueObject.Send()
 	if err != nil {
 		fmt.Println(err)
 	}
+
 	falseRes, err := falseObject.Send()
 	if err != nil {
 		fmt.Println(err)
@@ -264,29 +267,56 @@ func iterateJSPostBooleanInjections(att scanutil.AttackObject) []scanutil.Inject
 	 *  so we need to ensure that we try every combination of
 	 *  parameters to maximize injection findings.
 	 */
-	for _, quoteType := range []string{"'", "\""} {
+	for _, quoteType := range []string{"'"} {
 		// try with both single quoted and double quoted strings
 		injections := scanutil.JSInjections(quoteType)
 		for keylist := range scanutil.BodyItemCombinations(att.BodyValues) {
 			for trueJS, falseInjections := range injections {
 				// Assign all keys in this combination to True
+
 				trueObj := att.Copy()
 				for _, key := range keylist {
 					injection := `"` + key.Value + trueJS + `"`
 					trueObj.ReplaceBodyObject(key.Value, injection, false, key.Placement)
 				}
-				falseObj := trueObj.Copy()
+				
 				for i, key := range keylist {
 					for _, falseJS := range falseInjections {
+						falseObj := trueObj.Copy()
 						injection := `"` + key.Value + falseJS + `"`
-						falseObj.ReplaceBodyObject(key.Value+trueJS, injection, false, i)
+						falseObj.ReplaceBodyObject(key.Value + trueJS, injection, false, i)
 						injectable, injectionSuccess := runInjection(att, trueObj, falseObj, key.Value, key.Value, key.Value+trueJS, injection)
 						if injectionSuccess {
 							injectables = append(injectables, injectable)
 						}
-						falseObj.ReplaceBodyObject(injection, trueJS, false, -1)
 					}
 				}
+			}
+		}
+	}
+	return scanutil.Unique(injectables)
+}
+
+/*****************************************************
+				Object injections
+******************************************************/
+
+/**
+ * Sometimes, an application passes a full object back, which is placed directly into the backend. Let's see if we can detect that.
+ */
+
+func iterateObjectInjections(att scanutil.AttackObject) []scanutil.InjectionObject {
+	var injectables []scanutil.InjectionObject
+
+	trueRequest := att.Copy()
+	falseRequest := att.Copy()
+	for _, trueObject := range data.ObjectInjectionsTrue {
+		trueRequest.SetBody(trueObject)
+		for _, falseObject := range data.ObjectInjectionsFalse {
+			falseRequest.SetBody(falseObject)
+			injectable, injectionSuccess := runInjection(att, trueRequest, falseRequest, "Body", "", trueObject, falseObject)
+			if injectionSuccess {
+				injectables = append(injectables, injectable)
 			}
 		}
 	}

@@ -74,7 +74,7 @@ func (i *InjectionObject) String() string {
  * Return a hash of this object
  */
 func (i *InjectionObject) Hash() string {
-	serial := string(i.Type) + i.AttackObject.Request.URL.String() + i.InjectableParam + i.InjectedParam + i.InjectedValue
+	serial := i.Type.String() + i.AttackObject.Request.URL.String() + i.InjectableParam  + i.InjectedParam + i.InjectedValue
 	md5 := md5.Sum([]byte(serial))
 	return string(md5[:])
 }

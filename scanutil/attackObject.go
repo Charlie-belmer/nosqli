@@ -26,10 +26,12 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"net"
 	"os"
 	"regexp"
 	"strings"
 	"time"
+	"strconv"
 )
 
 // An object to keep track of where values  are located within a request body
@@ -48,10 +50,12 @@ type AttackObject struct {
 	Body         string
 	originalBody string     // Keep the original body, so we can reset it after injecting attack strings.
 	BodyValues   []BodyItem // List of all values that can be updated. May include maps or arrays (if body is JSON) - but as Strings
+	IgnoreCache	 bool 	 	// Whether to leverage the cache on requests.
 }
 
 func NewAttackObject(options ScanOptions) (AttackObject, error) {
 	attackObj := AttackObject{}
+	attackObj.IgnoreCache = false
 
 	if options.Request != "" {
 		attackObj = parseRequest(options.Request)
@@ -109,7 +113,14 @@ func parseRequest(file string) AttackObject {
  */
 func (a *AttackObject) addClient() {
 	proxy := a.Options.Proxy()
-	transport := &http.Transport{}
+	transport := &http.Transport{
+		Dial: (&net.Dialer{
+			    Timeout: 10 * time.Second,
+			  }).Dial,
+		TLSHandshakeTimeout: 10 * time.Second,
+		MaxIdleConns: 20,
+		DisableKeepAlives: true,
+	}
 
 	if proxy != "" {
 		proxyURL, err := url.Parse(proxy)
@@ -120,7 +131,7 @@ func (a *AttackObject) addClient() {
 		transport.Proxy = http.ProxyURL(proxyURL)
 	}
 	a.Client = &http.Client{
-		Timeout:   30 * time.Second,
+		Timeout:   10 * time.Second,
 		Transport: transport,
 	}
 }
@@ -129,7 +140,7 @@ func (a *AttackObject) addClient() {
  * Return a unique hash of this object
  */
 func (a *AttackObject) Hash() string {
-	serial := a.Body + a.Request.URL.String()
+	serial := a.Body + a.Request.URL.String() + strconv.FormatBool(a.IgnoreCache) + a.Request.Method
 	md5 := md5.Sum([]byte(serial))
 	return string(md5[:])
 }
@@ -140,6 +151,7 @@ func (a *AttackObject) Hash() string {
 func (a *AttackObject) Copy() AttackObject {
 	attackObj, _ := NewAttackObject(a.Options)
 	attackObj.Body = a.Body
+	attackObj.IgnoreCache = a.IgnoreCache
 	copy(attackObj.BodyValues, a.BodyValues)
 	attackObj.originalBody = a.originalBody
 	attackObj.Request.URL.RawQuery = a.Request.URL.RawQuery
@@ -237,10 +249,13 @@ func strReplace(source, pattern, replacement string, index int) string {
 		var newBody string
 		components := strings.Split(source, pattern)
 		for i, substring := range components {
-			if i == index {
-				newBody = newBody + substring + replacement
-			} else if i == len(components)-1 {
+			if i == len(components)-1 {
 				newBody = newBody + substring
+				if i == index && strings.HasSuffix(source, pattern) {
+					newBody = newBody + replacement
+				}
+			} else if i == index {
+				newBody = newBody + substring + replacement
 			} else {
 				newBody = newBody + substring + pattern
 			}
@@ -449,8 +464,10 @@ var requestCache map[string]HTTPResponseObject = map[string]HTTPResponseObject{}
  * Send the request to the object target
  */
 func (a *AttackObject) Send() (HTTPResponseObject, error) {
-	if res, ok := requestCache[a.Hash()]; ok {
-		return res, nil
+	if !a.IgnoreCache {
+		if res, ok := requestCache[a.Hash()]; ok {
+			return res, nil
+		}
 	}
 
 	a.setRequestBody()
@@ -468,7 +485,6 @@ func (a *AttackObject) Send() (HTTPResponseObject, error) {
 	obj.StatusCode = resp.StatusCode
 
 	defer resp.Body.Close()
-
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println(err)
@@ -477,6 +493,5 @@ func (a *AttackObject) Send() (HTTPResponseObject, error) {
 
 	obj.Body = string(body)
 	requestCache[a.Hash()] = obj
-
 	return obj, nil
 }
