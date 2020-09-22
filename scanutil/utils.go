@@ -21,11 +21,6 @@ import (
 	"strings"
 )
 
-// Generic utility functions
-type stringer interface{
-	String() string
-}
-
 /**
  * return a map of true injections, with associated false injections to test.
  *
