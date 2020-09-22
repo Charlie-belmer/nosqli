@@ -26,8 +26,8 @@ import (
 TOOL CONSTANTS
 
 **/
-var Version string = "0.1"
-var VersionName string = "Pre-Release Alpha"
+var Version string = "0.5"
+var VersionName string = "Alpha"
 
 /**
 
@@ -38,7 +38,7 @@ var MongoSpecialCharacters = []string{"'", "\"", "$", ".", ">", "[", "]"}
 var MongoSpecialKeyCharacters = []string{"[$]"}
 var MongoJSONErrorAttacks = []string{`{"foo": 1}`}
 var MongoPrefixes = []string{"'", "\""}
-var MongoGetInjection = []string{"[$nin][]", "[$ne]", "[$gt]", "[$lt]"}
+var MongoGetInjection = []string{"[$nin][]", "[$ne]", "[$gt]", "[$lt]"}	//Not currently used, but might be usable later
 var ObjectPrefixes = []string{""}
 
 /*

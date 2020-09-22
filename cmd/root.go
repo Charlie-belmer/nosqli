@@ -39,7 +39,7 @@ var rootCmd = &cobra.Command{
 	Long: `NoSQLInjector is a CLI tool for testing Datastores that 
 do not depend on SQL as a query language. 
 
-The tool aims to be a simple automation tool for identifying and exploiting 
+nosqli aims to be a simple automation tool for identifying and exploiting 
 NoSQL Injection vectors.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:

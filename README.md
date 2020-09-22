@@ -82,7 +82,7 @@ go test ./... -args -integrations=true
 If either environment is not found, integration tests will be disabled by one of the test cases, to speed the test run.
 
 ## Contributing
-Contributions are welcome! Please submit a pull request, limiting changes to one logical change per pull request. 
+Contributions are welcome! Please submit a pull request or open an issue for discussion.
 
 ### Contributors License
 Unless you specify otherwise, it is understood that you are offering the nosqli project the unlimited, non-exclusive right to reuse, modify, and relicense the code you contribute. This project will always be available Open Source, but this is important because the inability to relicense code has caused devastating problems for other Free Software projects (such as KDE and NASM). If you wish to specify special license conditions of your contributions, just say so when you send them.
