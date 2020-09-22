@@ -18,10 +18,11 @@ package cmd
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/Charlie-belmer/nosqli/scanners"
 	"github.com/Charlie-belmer/nosqli/scanutil"
 	"github.com/spf13/cobra"
-	"log"
 )
 
 // scanCmd represents the scan command
@@ -48,6 +49,8 @@ Examples:
 		injectables = append(injectables, scanners.ErrorBasedInjectionTest(attackObj)...)
 		fmt.Printf("Running Boolean based scan...\n")
 		injectables = append(injectables, scanners.BlindBooleanInjectionTest(attackObj)...)
+		fmt.Printf("Running Timing based scan...\n")
+		injectables = append(injectables, scanners.TimingInjectionTest(attackObj)...)
 		display(injectables)
 	},
 }
