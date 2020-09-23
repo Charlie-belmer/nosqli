@@ -34,6 +34,8 @@ import (
 	"strconv"
 )
 
+var injectionClient *http.Client = nil
+
 // An object to keep track of where values  are located within a request body
 type BodyItem struct {
 	Value     string // The specific item in the body
@@ -59,6 +61,11 @@ func NewAttackObject(options ScanOptions) (AttackObject, error) {
 
 	if options.Request != "" {
 		attackObj = parseRequest(options.Request)
+
+		// If user hasn't specified a user Agent, update to keep the one in the file
+		if options.UserAgentInput == "" {
+			options.UserAgentInput = attackObj.Request.Header.Get("User-Agent")
+		}
 	} else if options.Target != "" {
 		var err error
 		attackObj.Request, err = http.NewRequest("", options.Target, nil)
@@ -97,7 +104,6 @@ func parseRequest(file string) AttackObject {
 	if err != nil {
 		log.Fatal(err)
 	}
-	obj.addClient()
 
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(obj.Request.Body)
@@ -112,28 +118,31 @@ func parseRequest(file string) AttackObject {
  *	Add a default client object to the attack object
  */
 func (a *AttackObject) addClient() {
-	proxy := a.Options.Proxy()
-	transport := &http.Transport{
-		Dial: (&net.Dialer{
-			    Timeout: 10 * time.Second,
-			  }).Dial,
-		TLSHandshakeTimeout: 10 * time.Second,
-		MaxIdleConns: 20,
-		DisableKeepAlives: true,
-	}
-
-	if proxy != "" {
-		proxyURL, err := url.Parse(proxy)
-		if err != nil {
-			log.Fatalf("Proxy not set correctly: %s", err)
+	if injectionClient == nil {
+		proxy := a.Options.Proxy()
+		transport := &http.Transport{
+			Dial: (&net.Dialer{
+				    Timeout: 10 * time.Second,
+				  }).Dial,
+			TLSHandshakeTimeout: 10 * time.Second,
+			MaxIdleConns: 20,
+			DisableKeepAlives: true,
 		}
-		fmt.Printf("Using proxy %s\n", proxyURL)
-		transport.Proxy = http.ProxyURL(proxyURL)
+		if proxy != "" {
+			proxyURL, err := url.Parse(proxy)
+			if err != nil {
+				log.Fatalf("Proxy not set correctly: %s", err)
+			} else {
+				fmt.Printf("Using proxy %s\n", proxyURL)
+				transport.Proxy = http.ProxyURL(proxyURL)
+			}
+		}
+		injectionClient = &http.Client{
+			Timeout:   10 * time.Second,
+			Transport: transport,
+		}
 	}
-	a.Client = &http.Client{
-		Timeout:   10 * time.Second,
-		Transport: transport,
-	}
+	a.Client = injectionClient
 }
 
 /**
@@ -156,7 +165,7 @@ func (a *AttackObject) Copy() AttackObject {
 	attackObj.originalBody = a.originalBody
 	attackObj.Request.URL.RawQuery = a.Request.URL.RawQuery
 	attackObj.Request.Method = a.Request.Method
-	attackObj.Request.Header.Set("Content-Type", a.Request.Header.Get("Content-Type"))
+	attackObj.Request.Header = a.Request.Header.Clone()
 	return attackObj
 }
 
