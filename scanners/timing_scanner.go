@@ -117,7 +117,6 @@ func iteratePostTimingInjections(att scanutil.AttackObject) []scanutil.Injection
 							attackObj := att.Copy()
 							attackString := wrapQuote + keepVal + prefix + tInjection + suffix + wrapQuote
 							attackObj.ReplaceBodyObject(bodyValue.Value, attackString, false, bodyValue.Placement)
-							fmt.Printf("Body: %+v\n", attackObj.Body)
 							timing := measureRequest(attackObj)
 							if isTimingInjectable(baselineTimes, timing) {
 								fmt.Println("Injection Found")
