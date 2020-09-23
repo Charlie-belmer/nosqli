@@ -11,9 +11,14 @@ It aims to be fast, accurate, and highly usable, with an easy to understand comm
 Nosqli currently supports nosql injection detection for Mongodb. It runs the following tests:
  * Error based - inject a variety of characters and payloads, searching responses for known Mongo errors
  * Boolean Blind injection - inject parameters with true/false payloads and attempt to determine if an injection exists
+ * Timing injection - attempt to inject timing delays in the server, to measure the response.
+
+## Installation
+
+[Download the latest binary version](https://github.com/Charlie-belmer/nosqli/releases) for your OS, and install it in your path, or run from a local folder.
 
 ## Roadmap
-Boolean based extraction is next on the list, followed by JavaScript injection, then timed injection attacks & data extraction.
+I plan to add data extraction features. If you would like to see other features or configuration options, please open a pull request or issue!
 
 ## Using nosqli
 It should be self-documented by simply running the command and reading the help files.
@@ -23,7 +28,7 @@ $ nosqli
 NoSQLInjector is a CLI tool for testing Datastores that 
 do not depend on SQL as a query language. 
 
-The tool aims to be a simple automation tool for identifying and exploiting 
+nosqli aims to be a simple automation tool for identifying and exploiting 
 NoSQL Injection vectors.
 
 Usage:
@@ -52,14 +57,13 @@ Found Error based NoSQL Injection:
   URL: http://localhost:4000/user/lookup?=&username=test
   param: username
   Injection: username='
- ```
+```
 
  You can test the tool using my vulnerable node js app, or other nosql injection labs.
 
-## Installation
-To install the tool, install from source. Since I am rapidly making changes at this time, I haven't yet started distributing binaries. This will change once all core features are present (scan & extraction capabilities).
+## Building from source
 
-Clone the repository, install dependencies, and build the project
+If you prefer to build from source, or there isn't a compiled binary for your platform, you can do so by cloning the repository, installing dependencies, and building the project manually. This will require a recent Go version, and the appropriate GOPATH environment variable.
 
 ```bash
 $ git clone https://github.com/Charlie-belmer/nosqli
