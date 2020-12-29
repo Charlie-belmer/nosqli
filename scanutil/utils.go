@@ -21,11 +21,81 @@ import (
 	"strings"
 )
 
+/* Return all keys for a given map */
+func Keys(aMap map[string]string) []string {
+	keys := make([]string, len(aMap))
+	i := 0
+	for k, _ := range aMap {
+		keys[i] = k
+		i++
+	}
+	return keys
+}
+
+/* Return all values for a given map */
+func Values(aMap map[string]string) []string {
+	values := make([]string, len(aMap))
+	i := 0
+	for _, v := range aMap {
+		values[i] = v
+		i++
+	}
+	return values
+}
+
+/*
+ * Transform key:value pairs (generally for parameters) based on passed in transforms.
+ * For instance, a site might have something like url/page?user=name, and we could pass
+ * this function the key value pair {user:name} with transform functions that would 
+ * inject some data.
+ *
+ * TODO: Get this more generic so it can work on more use cases. Right now func is not in use.
+ * 
+ * The function returns all combinations of transformed keys and values, with each entry having the following format:
+ * 		{"newkey":"transformed_key", "newvalue":"transformed_value", "oldkey":"original_key", "oldvalue":"original_value"}
+ *
+ * A combination might look like:
+ * 		[
+ 			[
+ 				{"newkey":"transformed_key", "newvalue":"transformed_value", "oldkey":"original_key", "oldvalue":"original_value"},
+ 				{"newkey":"transformed_key_2", "newvalue":"transformed_value_2", "oldkey":"original_key_2", "oldvalue":"original_value_2"}
+ 			],
+ 			[
+ 				{"newkey":"transformed_key", "newvalue":"transformed_value", "oldkey":"original_key", "oldvalue":"original_value"}
+ 			]
+ 			[ ... ]
+ 		]
+ */
+func GetTransformedValues(kvList map[string]string, keyTransform func(string) string, valTransform func(string) string, transformKeys bool, transformValues bool) [][]map[string]string {
+	var result [][]map[string]string //list of new (kv) maps
+	for combo := range StringCombinations(Keys(kvList)) {
+		var comboObj []map[string]string
+		for _, k := range combo {
+			values := make(map[string]string)
+			values["oldkey"] = k
+			values["oldvalue"] = kvList[k]
+			values["newkey"] = k
+			values["newvalue"] = kvList[k]
+			
+			if transformKeys {
+				values["newkey"] = keyTransform(k)
+			}
+			if transformValues {
+				values["newvalue"] = valTransform(kvList[k])
+			}
+			comboObj = append(comboObj, values)
+		}
+		result = append(result, comboObj)
+	}
+	return result
+}
+
+
 /**
  * return a map of true injections, with associated false injections to test.
  *
  * params:
- *   trueInjections true to return list of always true values
+ *   quoteType whether to use a single or double quote for injections.
  */
 func JSInjections(quoteType string) map[string][]string {
 	attacks := map[string][]string{}
@@ -80,6 +150,13 @@ func StringCombinations(data []string) <-chan []string {
 	return c
 }
 
+/*
+ * Return all combinations of body elements in an attackObject. This is the same as string combo
+ * above.
+ * 
+ * Parameters:
+ * data: A body item list. BodyItem is defined in attack objects, and has a value and location.
+ */
 func BodyItemCombinations(data []BodyItem) <-chan []BodyItem {
 	c := make(chan []BodyItem)
 	iData := make([]interface{}, len(data))

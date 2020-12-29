@@ -38,7 +38,7 @@ var MongoSpecialCharacters = []string{"'", "\"", "$", ".", ">", "[", "]"}
 var MongoSpecialKeyCharacters = []string{"[$]"}
 var MongoJSONErrorAttacks = []string{`{"foo": 1}`}
 var MongoPrefixes = []string{"'", "\""}
-var MongoGetInjection = []string{"[$nin][]", "[$ne]", "[$gt]", "[$lt]"}	//Not currently used, but might be usable later
+var MongoGetInjection = []string{"[$nin][]", "[$ne]", "[$gt]", "[$lt]"}
 var ObjectPrefixes = []string{""}
 
 /*

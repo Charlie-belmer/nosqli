@@ -47,6 +47,8 @@ Examples:
 		var injectables []scanutil.InjectionObject
 		fmt.Printf("Running Error based scan...\n")
 		injectables = append(injectables, scanners.ErrorBasedInjectionTest(attackObj)...)
+		fmt.Printf("Running GET parameter scan...\n")
+		injectables = append(injectables, scanners.GetInjectionTest(attackObj)...)
 		fmt.Printf("Running Boolean based scan...\n")
 		injectables = append(injectables, scanners.BlindBooleanInjectionTest(attackObj)...)
 		fmt.Printf("Running Timing based scan...\n")
