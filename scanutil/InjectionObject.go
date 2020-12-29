@@ -28,6 +28,7 @@ const (
 	Blind = InjectionType(iota)
 	Timed
 	Error
+	GetParam
 )
 
 func (it InjectionType) String() string {
@@ -38,6 +39,8 @@ func (it InjectionType) String() string {
 		return "Timing based NoSQL Injection"
 	case Error:
 		return "Error based NoSQL Injection"
+	case GetParam:
+		return "Get Parameter NoSQL Injection"
 	}
 	return ""
 }
@@ -57,6 +60,8 @@ type InjectionObject struct {
 	InjectableParam string
 	InjectedParam   string
 	InjectedValue   string
+	Prefix			string
+	Suffix 			string
 }
 
 func (i *InjectionObject) Print() {
