@@ -60,7 +60,7 @@ func NewAttackObject(options ScanOptions) (AttackObject, error) {
 	attackObj.IgnoreCache = false
 
 	if options.Request != "" {
-		attackObj = parseRequest(options.Request)
+		attackObj = parseRequest(options.Request, options)
 
 		// If user hasn't specified a user Agent, update to keep the one in the file
 		if options.UserAgentInput == "" {
@@ -68,6 +68,11 @@ func NewAttackObject(options ScanOptions) (AttackObject, error) {
 		}
 	} else if options.Target != "" {
 		var err error
+		if options.RequireHTTPS {
+			if options.Target[0:5] != "https" && options.Target[0:4] == "http" {
+				options.Target = "https" + options.Target[strings.Index(options.Target, "://"):]
+			}
+		}
 		attackObj.Request, err = http.NewRequest("", options.Target, nil)
 		if err != nil {
 			log.Fatal(err)
@@ -86,7 +91,7 @@ func NewAttackObject(options ScanOptions) (AttackObject, error) {
 	return attackObj, nil
 }
 
-func parseRequest(file string) AttackObject {
+func parseRequest(file string, options ScanOptions) AttackObject {
 	obj := AttackObject{}
 	fh, err := os.Open(file)
 	if err != nil {
@@ -98,9 +103,14 @@ func parseRequest(file string) AttackObject {
 		log.Fatal(err)
 	}
 
+	scheme := "http"
+	if options.RequireHTTPS {
+		scheme = "https"
+	}
+
 	// Update the request to make sure it is properly formed
 	obj.Request.RequestURI = ""
-	obj.Request.URL, err = url.Parse("http://" + obj.Request.Host + obj.Request.URL.String())
+	obj.Request.URL, err = url.Parse(scheme + "://" + obj.Request.Host + obj.Request.URL.String())
 	if err != nil {
 		log.Fatal(err)
 	}
