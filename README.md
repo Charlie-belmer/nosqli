@@ -1,4 +1,4 @@
-# NoSQL Injector
+# NoSQL Injector [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/share?text=NoSQLi%20Injection%20Security%20Scanner&url=https://github.com/Charlie-belmer/nosqli&hashtags=nosql,infosec)
 
 NoSQL scanner and injector.
 
