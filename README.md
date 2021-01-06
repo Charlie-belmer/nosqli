@@ -1,6 +1,6 @@
 # NoSQL Injector [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/share?text=NoSQLi%20Injection%20Security%20Scanner&url=https://github.com/Charlie-belmer/nosqli&hashtags=nosql,infosec)
-
-NoSQL scanner and injector.
+![Header Img](https://nullsweep.com/content/images/2020/12/NoSQLi.png)
+A fast NoSQL scanner and injector. For finding sites vulnerable to NoSQL injection, Mongo in particular.
 
 ## About Nosqli
 I wanted a better nosql injection tool that was simple to use, fully command line based, and configurable. To that end, I began work on nosqli - a simple nosql injection tool written in Go. 
