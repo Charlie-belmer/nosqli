@@ -26,7 +26,7 @@ import (
 TOOL CONSTANTS
 
 **/
-var Version string = "0.5.2"
+var Version string = "0.5.3"
 var VersionName string = "Alpha"
 
 /**

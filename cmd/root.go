@@ -32,6 +32,7 @@ var proxy string
 var userAgent string
 var requestData string
 var requireHTTPS bool
+var allowInsecureCertificates bool
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -70,6 +71,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&userAgent, "user-agent", "u", "", "Specify a user agent")
 	rootCmd.PersistentFlags().StringVarP(&requestData, "data", "d", "", "Specify default post data (should not include any injection strings)")
 	rootCmd.PersistentFlags().BoolVar(&requireHTTPS, "https", false, "Always send requests as HTTPS (Defaults to HTTP when using request files)")
+	rootCmd.PersistentFlags().BoolVar(&allowInsecureCertificates, "insecure", false, "Ignore insecure certificate warnings")
 }
 
 // initConfig reads in config file and ENV variables if set.

@@ -32,6 +32,7 @@ type ScanOptions struct {
 	UserAgentInput string
 	RequestData    string
 	RequireHTTPS   bool
+	AllowInsecureCertificates bool
 }
 
 func (s *ScanOptions) Proxy() string {

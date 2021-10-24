@@ -61,6 +61,8 @@ Found Error based NoSQL Injection:
 
  You can test the tool using my vulnerable node js app, or other nosql injection labs.
 
+ When selecting the target URL, make sure all testable parameters are present in the URL. For example, assume a site has a page at /user/lookup with a form to search. After entering some data in the field, the URL changes to /user/lookup?username=<data>. If you scan only /user/lookup, the tool will not find possible injections. To scan correctly, insure the full URL with all parameters is used (/user/lookup?username=<data> in this case).
+
 ## Building from source
 
 If you prefer to build from source, or there isn't a compiled binary for your platform, you can do so by cloning the repository, installing dependencies, and building the project manually. This will require a recent Go version, and the appropriate GOPATH environment variable.
@@ -68,7 +70,7 @@ If you prefer to build from source, or there isn't a compiled binary for your pl
 ```bash
 $ git clone https://github.com/Charlie-belmer/nosqli
 $ cd nosqli
-$ go get ./..
+$ go get -u -d ./...
 $ go install
 $ nosqli -h
 ```
@@ -79,7 +81,7 @@ There is a decent test suite included. Unit tests along with simple injection co
 go test ./...
 ```
 
-Integration tests are also available which run injections against known vulnerable apps running locally. To use integration tests, install and run the [vulnerable nodejs Mongo injection app](https://github.com/Charlie-belmer/vulnerable-node-app) and my [vulnerable PHP lab fork](https://github.com/Charlie-belmer/nosqlilab) from [digininja](https://digi.ninja/projects/nosqli_lab.php). Then pass in the integrations flag:
+Integration tests are also available which run injections against known vulnerable apps running locally. To use integration tests, install and run the [vulnerable nodejs Mongo injection app](https://github.com/Charlie-belmer/vulnerable-node-app) and my [vulnerable PHP lab fork](https://github.com/Charlie-belmer/nosqlilab) from [digininja](https://digi.ninja/projects/nosqli_lab.php). Remember to browse to each site and reset the DB! Then pass in the integrations flag:
 ```bash
 go test ./... -args -integrations=true
 ```

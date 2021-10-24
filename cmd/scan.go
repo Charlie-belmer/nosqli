@@ -37,8 +37,7 @@ For instance, if you wish to check user/password submissions, try to submit a va
 Examples:
     nosqli scan -u http://localhost/page?id=5`,
 	Run: func(cmd *cobra.Command, args []string) {
-		var scanOptions = scanutil.ScanOptions{target, request, proxy, userAgent, requestData, requireHTTPS}
-
+		var scanOptions = scanutil.ScanOptions{target, request, proxy, userAgent, requestData, requireHTTPS, allowInsecureCertificates}
 		attackObj, err := scanutil.NewAttackObject(scanOptions)
 		if err != nil {
 			log.Fatal(err)

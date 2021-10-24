@@ -20,6 +20,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/md5"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -137,6 +138,7 @@ func (a *AttackObject) addClient() {
 			TLSHandshakeTimeout: 10 * time.Second,
 			MaxIdleConns: 20,
 			DisableKeepAlives: true,
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: a.Options.AllowInsecureCertificates},
 		}
 		if proxy != "" {
 			proxyURL, err := url.Parse(proxy)
