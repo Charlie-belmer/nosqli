@@ -98,6 +98,8 @@ func parseRequest(file string, options ScanOptions) AttackObject {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer fh.Close()
+
 	data := bufio.NewReader(fh)
 	obj.Request, err = http.ReadRequest(data)
 	if err != nil {
